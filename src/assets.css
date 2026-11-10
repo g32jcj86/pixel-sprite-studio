@@ -1,0 +1,185 @@
+.asset-dialog {
+  width: min(840px, 94vw);
+  max-height: 90vh;
+  overflow: auto;
+  border: 1px solid #41474d;
+  border-radius: 12px;
+  background: #20252b;
+  color: #eee;
+  padding: 24px;
+  box-shadow: 0 24px 90px #000a;
+}
+.asset-dialog::backdrop {
+  background: #090b10b8;
+}
+.asset-dialog header,
+.asset-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.asset-dialog header h2 {
+  font-size: 21px;
+  margin: 0;
+}
+.asset-dialog section {
+  padding: 20px 0;
+}
+.asset-dialog p {
+  color: #a9b2bb;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.asset-dialog label {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  margin: 7px 12px 7px 0;
+  font-size: 13px;
+}
+.asset-dialog input[type="number"] {
+  width: 70px;
+}
+.asset-dialog input,
+.asset-dialog select {
+  background: #15191f;
+  border: 1px solid #4b525c;
+  color: #e9edf0;
+  border-radius: 5px;
+  padding: 7px;
+}
+.asset-dialog button {
+  border: 1px solid #49525b;
+  background: #303740;
+  color: #eee;
+  padding: 8px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.asset-dialog button.primary {
+  background: #b9ea77;
+  color: #192210;
+  border-color: #b9ea77;
+}
+.asset-dialog footer {
+  justify-content: flex-end;
+}
+.asset-preview,
+.asset-thumb {
+  image-rendering: pixelated;
+  background-color: #262c32;
+  background-image:
+    linear-gradient(45deg, #343b43 25%, transparent 25%),
+    linear-gradient(-45deg, #343b43 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #343b43 75%),
+    linear-gradient(-45deg, transparent 75%, #343b43 75%);
+  background-size: 16px 16px;
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0;
+  border: 1px solid #4a525b;
+}
+.asset-preview {
+  width: 224px;
+  height: 224px;
+  object-fit: contain;
+  margin-top: 12px;
+}
+.asset-compare {
+  display: flex;
+  gap: 28px;
+  margin: 16px 0;
+  font-size: 13px;
+}
+.asset-compare > div {
+  display: flex;
+  flex-direction: column;
+}
+.asset-swatches {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.asset-swatches span {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+.asset-import-previews {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  max-height: 260px;
+  overflow: auto;
+  margin-top: 14px;
+}
+.asset-thumb {
+  width: 76px;
+  height: 76px;
+}
+.asset-dialog [data-files] {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+
+.asset-dialog {
+  background: #faf8f1;
+  color: #303c35;
+  border-color: #c8cec3;
+}
+.asset-dialog header,
+.asset-dialog footer {
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  position: static;
+}
+.asset-dialog p {
+  color: #6e776e;
+}
+.asset-dialog input,
+.asset-dialog select {
+  background: #fffef8;
+  color: #354438;
+  border-color: #cdd3c7;
+}
+.asset-dialog button {
+  background: #eeeee3;
+  color: #3b4c40;
+  border-color: #cbd1c5;
+}
+.asset-dialog button.primary {
+  background: #476d56;
+  color: #fff;
+  border-color: #476d56;
+}
+.asset-preview,
+.asset-thumb {
+  background-color: #eeeede;
+  background-image:
+    linear-gradient(45deg, #dedfd2 25%, transparent 25%),
+    linear-gradient(-45deg, #dedfd2 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #dedfd2 75%),
+    linear-gradient(-45deg, transparent 75%, #dedfd2 75%);
+  border-color: #b8c2b1;
+}
+@media (max-width: 700px) {
+  .asset-dialog {
+    padding: 16px;
+    width: 94vw;
+  }
+  .asset-preview {
+    width: 140px;
+    height: 140px;
+  }
+  .asset-compare {
+    gap: 12px;
+  }
+}
