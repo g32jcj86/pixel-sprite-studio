@@ -623,3 +623,32 @@
 #reposition-source-anchor-info {
   font-variant-numeric: tabular-nums;
 }
+.bbox-registration-settings[hidden],
+.registration-controls[hidden] {
+  display: none !important;
+}
+.anchor-point-marker.patch-anchor-marker {
+  border: 1px solid #ff6200;
+  outline: 1px solid white;
+  border-radius: 0;
+  background: none;
+}
+.patch-anchor-marker::before,
+.patch-anchor-marker::after {
+  content: "";
+  position: absolute;
+  background: #ff6200;
+  box-shadow: 0 0 0 1px white;
+}
+.patch-anchor-marker::before {
+  width: 1px;
+  height: 100%;
+  left: 50%;
+  top: 0;
+}
+.patch-anchor-marker::after {
+  height: 1px;
+  width: 100%;
+  top: 50%;
+  left: 0;
+}

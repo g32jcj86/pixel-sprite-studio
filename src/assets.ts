@@ -1,3 +1,4 @@
+import { createRegistrationControls } from "./registration-ui";
 import {
   alphaSummary,
   pixelsToRgba,
@@ -370,6 +371,60 @@ export function openAlignmentDialog(
     anchorGrid("data-alignment-source-anchor", "角色錨點") +
     anchorGrid("data-alignment-target-anchor", "畫布定位點");
   element.querySelector(".asset-frame-selection")!.after(choices);
+  const alignmentRegistration = createRegistrationControls(() => update()),
+    alignmentManual = new Map<number, { x: number; y: number }>();
+  const method = document.createElement("label");
+  method.innerHTML =
+    '定位方式 <select id="alignment-method"><option value="patch">自動定位（局部特徵比對）</option><option value="anchors">進階：外框／自訂錨點</option></select>';
+  const legacy = document.createElement("div");
+  legacy.className = "bbox-registration-settings";
+  [
+    choices,
+    element.querySelector("#mode")!.closest("label")!,
+    element.querySelector("#px")!.closest("label")!,
+    element.querySelector("#py")!.closest("label")!,
+  ].forEach((node) => legacy.append(node));
+  element
+    .querySelector(".asset-frame-selection")!
+    .after(method, alignmentRegistration.element, legacy);
+  element.querySelector("section > p")!.textContent =
+    "以參考影格的局部細節比對其他影格，不用外框或重心代替特徵；低信心位置需放大確認。";
+  element
+    .querySelector("#alignment-method")!
+    .addEventListener("change", () => update());
+  let playTimer = 0;
+  const play = document.createElement("button");
+  play.id = "alignment-play";
+  play.type = "button";
+  play.innerHTML = icon("play") + "播放前後對比";
+  element.querySelector("#frame")!.closest("label")!.after(play);
+  play.onclick = () => {
+    if (playTimer) {
+      window.clearInterval(playTimer);
+      playTimer = 0;
+    } else
+      playTimer = window.setInterval(() => {
+        const input = element.querySelector<HTMLInputElement>("#frame")!;
+        input.value = String((Number(input.value) % frames.length) + 1);
+        update();
+      }, 180);
+    play.innerHTML =
+      icon(playTimer ? "pause" : "play") +
+      (playTimer ? "暫停" : "播放前後對比");
+  };
+  element.addEventListener("close", () => window.clearInterval(playTimer));
+  const sourcePatch = document.createElement("span"),
+    resultPatch = document.createElement("span");
+  [
+    { selector: "[data-source]", marker: sourcePatch },
+    { selector: "[data-result]", marker: resultPatch },
+  ].forEach(({ selector, marker }) => {
+    marker.className = "registration-small-patch";
+    marker.setAttribute("aria-hidden", "true");
+    const parent = element.querySelector(selector)!.parentElement!;
+    parent.style.position = "relative";
+    parent.append(marker);
+  });
   element
     .querySelectorAll<HTMLElement>("[data-alignment-source-anchor]")
     .forEach(
@@ -453,6 +508,11 @@ export function openAlignmentDialog(
   element
     .querySelector<HTMLCanvasElement>("[data-result]")!
     .addEventListener("click", (event) => {
+      if (
+        (element.querySelector("#alignment-method") as HTMLSelectElement)
+          .value === "patch"
+      )
+        return;
       const point = canvasClickPoint(
         event.currentTarget as HTMLCanvasElement,
         event,
@@ -473,6 +533,12 @@ export function openAlignmentDialog(
     }),
   );
   const update = () => {
+    const isPatch =
+      (element.querySelector("#alignment-method") as HTMLSelectElement)
+        .value === "patch";
+    legacy.hidden = isPatch;
+    alignmentRegistration.element.hidden = !isPatch;
+    let patchInfo = "";
     element
       .querySelectorAll<HTMLElement>("[data-alignment-source-anchor]")
       .forEach((button) => {
@@ -497,39 +563,85 @@ export function openAlignmentDialog(
     const iX = numberValue(element, "px"),
       iY = numberValue(element, "py");
     next = structuredClone(project);
-    next.pivot = { x: iX, y: iY };
-    let iIndex = 0;
-    next.actions[iAction].frames.forEach((frame) => {
-      const iCurrent = iIndex++;
-      if (
-        !(
-          element.querySelector(
-            `[data-align-frame="${iCurrent}"]`,
-          ) as HTMLInputElement
-        ).checked
-      )
-        return;
-      let point = points[iCurrent];
-      if (
-        (element.querySelector("#mode") as HTMLSelectElement).value === "auto"
-      ) {
-        const bounds = alphaBounds(frame.pixels, project.width);
-        if (bounds) point = sourceAnchor(bounds, alignmentSource);
-        points[iCurrent] = point;
-      }
-      frame.pixels = mapSize(
-        frame.pixels,
-        project.width,
-        project.height,
-        project.width,
-        project.height,
-        false,
-        iX - point.x,
-        iY - point.y,
-      );
-      if (frame.reference)
-        frame.reference = mapSize(
-          frame.reference,
+    if (isPatch) {
+      const selected = frames.flatMap((_, i) =>
+          (
+            element.querySelector(
+              '[data-align-frame="' + i + '"]',
+            ) as HTMLInputElement
+          ).checked
+            ? [i]
+            : [],
+        ),
+        plan = alignmentRegistration.resolve(
+          frames.map((frame) => frame.pixels),
+          project.width,
+          project.height,
+          selected,
+        ),
+        reference = selected[0];
+      const shifts = frames.map((_, i) => {
+        const extra = alignmentManual.get(i) || { x: 0, y: 0 };
+        return selected.includes(i) && i !== reference
+          ? { x: plan.matches[i].dx + extra.x, y: plan.matches[i].dy + extra.y }
+          : { x: 0, y: 0 };
+      });
+      const clipped = selected.some((i) => {
+        const b = alphaBounds(frames[i].pixels, project.width);
+        return (
+          b &&
+          (b.left + shifts[i].x < 0 ||
+            b.right + shifts[i].x >= project.width ||
+            b.top + shifts[i].y < 0 ||
+            b.bottom + shifts[i].y >= project.height)
+        );
+      });
+      const valid = plan.valid && !clipped;
+      (element.querySelector("[data-apply]") as HTMLButtonElement).disabled =
+        !valid;
+      if (valid)
+        next.actions[iAction].frames.forEach((frame, i) => {
+          frame.pixels = mapSize(
+            frame.pixels,
+            project.width,
+            project.height,
+            project.width,
+            project.height,
+            false,
+            shifts[i].x,
+            shifts[i].y,
+          );
+        });
+      patchInfo = clipped
+        ? "位移會超出畫布，已停止套用以免裁切。"
+        : !plan.valid
+          ? "尚有位置需手動確認；請放大參考影格選特徵，或逐格指定相符點。"
+          : "局部特徵比對可靠／已確認；參考影格、定位點與參考圖不變，僅平移選取的像素。";
+    } else {
+      (element.querySelector("[data-apply]") as HTMLButtonElement).disabled =
+        false;
+      next.pivot = { x: iX, y: iY };
+      let iIndex = 0;
+      next.actions[iAction].frames.forEach((frame) => {
+        const iCurrent = iIndex++;
+        if (
+          !(
+            element.querySelector(
+              `[data-align-frame="${iCurrent}"]`,
+            ) as HTMLInputElement
+          ).checked
+        )
+          return;
+        let point = points[iCurrent];
+        if (
+          (element.querySelector("#mode") as HTMLSelectElement).value === "auto"
+        ) {
+          const bounds = alphaBounds(frame.pixels, project.width);
+          if (bounds) point = sourceAnchor(bounds, alignmentSource);
+          points[iCurrent] = point;
+        }
+        frame.pixels = mapSize(
+          frame.pixels,
           project.width,
           project.height,
           project.width,
@@ -538,7 +650,19 @@ export function openAlignmentDialog(
           iX - point.x,
           iY - point.y,
         );
-    });
+        if (frame.reference)
+          frame.reference = mapSize(
+            frame.reference,
+            project.width,
+            project.height,
+            project.width,
+            project.height,
+            false,
+            iX - point.x,
+            iY - point.y,
+          );
+      });
+    }
     draw(
       element.querySelector("[data-source]")!,
       frames[iFrame].pixels,
@@ -578,8 +702,45 @@ export function openAlignmentDialog(
         context.drawImage(temp, 0, 0);
       });
     }
-    element.querySelector("[data-info]")!.textContent =
-      `第 ${iFrame + 1} 格 · 手動定位 (${points[iFrame].x}, ${points[iFrame].y}) · 超出畫布部分將裁切`;
+    const current = alignmentRegistration.current();
+    [
+      {
+        canvas: element.querySelector<HTMLCanvasElement>("[data-source]")!,
+        marker: sourcePatch,
+        point: current.matches[iFrame]?.found,
+      },
+      {
+        canvas: element.querySelector<HTMLCanvasElement>("[data-result]")!,
+        marker: resultPatch,
+        point: current.point,
+      },
+    ].forEach(({ canvas, marker, point }) => {
+      marker.hidden = !isPatch || !point;
+      if (marker.hidden || !point) return;
+      const r = canvas.getBoundingClientRect(),
+        parent = canvas.parentElement!.getBoundingClientRect(),
+        scale = Math.min(
+          canvas.clientWidth / canvas.width,
+          canvas.clientHeight / canvas.height,
+        );
+      marker.style.left =
+        r.left -
+        parent.left +
+        (r.width - canvas.width * scale) / 2 +
+        (point.x - current.radius) * scale +
+        "px";
+      marker.style.top =
+        r.top -
+        parent.top +
+        (r.height - canvas.height * scale) / 2 +
+        (point.y - current.radius) * scale +
+        "px";
+      marker.style.width = marker.style.height =
+        (current.radius * 2 + 1) * scale + "px";
+    });
+    element.querySelector("[data-info]")!.textContent = isPatch
+      ? patchInfo
+      : `第 ${iFrame + 1} 格 · 手動定位 (${points[iFrame].x}, ${points[iFrame].y}) · 超出畫布部分將裁切`;
   };
   element
     .querySelectorAll<HTMLElement>("[data-alignment-nudge]")
@@ -590,6 +751,15 @@ export function openAlignmentDialog(
           Math.min(frames.length - 1, numberValue(element, "frame") - 1),
         );
         const [x, y] = button.dataset.alignmentNudge!.split(",").map(Number);
+        if (
+          (element.querySelector("#alignment-method") as HTMLSelectElement)
+            .value === "patch"
+        ) {
+          const old = alignmentManual.get(i) || { x: 0, y: 0 };
+          alignmentManual.set(i, { x: old.x + x, y: old.y + y });
+          update();
+          return;
+        }
         points[i] = { x: points[i].x - x, y: points[i].y - y };
         (element.querySelector("#mode") as HTMLSelectElement).value = "manual";
         update();
@@ -603,6 +773,13 @@ export function openAlignmentDialog(
       0,
       Math.min(frames.length - 1, numberValue(element, "frame") - 1),
     );
+    if (
+      (element.querySelector("#alignment-method") as HTMLSelectElement)
+        .value === "patch"
+    ) {
+      alignmentRegistration.setFramePoint(iFrame, point);
+      return;
+    }
     points[iFrame] = point;
     (element.querySelector("#mode") as HTMLSelectElement).value = "manual";
     update();
@@ -860,6 +1037,8 @@ export function openImportDialog(
       if (
         (element.querySelector("#reposition-import") as HTMLInputElement)
           .checked &&
+        (element.querySelector("#reposition-method") as HTMLSelectElement)
+          .value === "anchors" &&
         (element.querySelector("#reposition-update-pivot") as HTMLInputElement)
           .checked
       )
@@ -945,6 +1124,27 @@ export function openImportDialog(
   sourceInfo.textContent =
     "點選「定位前」可指定本格角色錨點；點選「定位後」可指定共用畫布定位點。";
   anchorChoices.after(sourceInfo);
+  const methodLabel = document.createElement("label");
+  methodLabel.innerHTML =
+    '定位方式 <select id="reposition-method"><option value="patch">自動定位（局部特徵比對）</option><option value="anchors">進階：外框錨點定位</option></select>';
+  const registration = createRegistrationControls(() => refreshGrouping());
+  const bboxSettings = document.createElement("div");
+  bboxSettings.className = "bbox-registration-settings";
+  [
+    anchorChoices,
+    sourceInfo,
+    element.querySelector("#reposition-auto-anchor")!.closest("label")!,
+    element.querySelector("#reposition-x")!.closest("label")!,
+    element.querySelector("#reposition-y")!.closest("label")!,
+    element.querySelector("#reposition-update-pivot")!.closest("label")!,
+  ].forEach((node) => bboxSettings.append(node));
+  const repositionControls = element.querySelector("#reposition-controls")!;
+  repositionControls.prepend(methodLabel, registration.element, bboxSettings);
+  (repositionControls.querySelector("p") as HTMLElement).textContent =
+    "以第一格的穩定細節比對其他影格；可靠或手動確認後才套用。";
+  element
+    .querySelector("#reposition-method")!
+    .addEventListener("change", refreshGrouping);
   const beforePreview = document.createElement("div");
   beforePreview.className = "import-before-position";
   beforePreview.hidden = true;
@@ -1009,11 +1209,23 @@ export function openImportDialog(
         event,
       );
       if (point) {
+        if (
+          (element.querySelector("#reposition-method") as HTMLSelectElement)
+            .value === "patch"
+        ) {
+          registration.setFramePoint(iPreview, point);
+          return;
+        }
         manualSources.set(iPreview, point);
         refreshGrouping();
       }
     });
   outputCanvas.addEventListener("click", (event) => {
+    if (
+      (element.querySelector("#reposition-method") as HTMLSelectElement)
+        .value === "patch"
+    )
+      return;
     const point = canvasClickPoint(outputCanvas, event);
     if (point) {
       targetPreset = "custom";
@@ -1073,6 +1285,11 @@ export function openImportDialog(
     const selected = indexes.filter(
       (i) => !repositionExcluded.has(i) && bounds[i],
     );
+    const isPatch =
+      (element.querySelector("#reposition-method") as HTMLSelectElement)
+        .value === "patch";
+    bboxSettings.hidden = isPatch;
+    registration.element.hidden = !isPatch;
     const opaque = selected.filter(
       (i) =>
         !unaligned[i].some(
@@ -1081,6 +1298,76 @@ export function openImportDialog(
             (color.length === 9 && parseInt(color.slice(7, 9), 16) === 0),
         ),
     );
+    if (isPatch) {
+      const plan = registration.resolve(
+          unaligned,
+          iOutputWidth,
+          iOutputHeight,
+          selected,
+        ),
+        reference = selected[0];
+      const shifts = imported.map((_, i) => {
+        const manual = manualOffsets.get(i) || { x: 0, y: 0 };
+        return selected.includes(i) && i !== reference
+          ? {
+              x: plan.matches[i].dx + manual.x,
+              y: plan.matches[i].dy + manual.y,
+            }
+          : { x: 0, y: 0 };
+      });
+      const clipped = selected.some(
+        (i) =>
+          bounds[i] &&
+          (bounds[i]!.left + shifts[i].x < 0 ||
+            bounds[i]!.top + shifts[i].y < 0 ||
+            bounds[i]!.right + shifts[i].x >= iOutputWidth ||
+            bounds[i]!.bottom + shifts[i].y >= iOutputHeight),
+      );
+      repositionValid = plan.valid && !opaque.length && !clipped;
+      element.querySelector("#reposition-status")!.textContent = opaque.length
+        ? "選取影格沒有空白透明區域，請先處理背景，再辨識角色特徵。"
+        : clipped
+          ? "比對後有像素超出畫布，不會裁切套用。請保留更多留白或手動調整。"
+          : !plan.valid
+            ? "尚有不可靠的特徵位置：請放大選參考細節，並確認或手動指定各格相符點。"
+            : "局部特徵比對完成；參考影格不移動，僅平移其他選取影格，像素與 Alpha 保持原樣。";
+      element
+        .querySelector<HTMLElement>("#reposition-status")!
+        .classList.toggle("is-error", !repositionValid);
+      element
+        .querySelectorAll<HTMLElement>("[data-reposition-offset]")
+        .forEach((span) => {
+          const i = Number(span.dataset.repositionOffset);
+          span.textContent = !indexes.includes(i)
+            ? "不匯入"
+            : repositionExcluded.has(i)
+              ? "保留原位置"
+              : !bounds[i]
+                ? "空白"
+                : i === reference
+                  ? "參考格不移動"
+                  : "X " +
+                    shifts[i].x +
+                    " / Y " +
+                    shifts[i].y +
+                    " · " +
+                    (plan.matches[i]?.reliable ? "可靠／已確認" : "需確認");
+        });
+      if (repositionValid)
+        imported = imported.map((pixels, i) =>
+          mapSize(
+            pixels,
+            iOutputWidth,
+            iOutputHeight,
+            iOutputWidth,
+            iOutputHeight,
+            false,
+            shifts[i].x,
+            shifts[i].y,
+          ),
+        );
+      return;
+    }
     if (
       (element.querySelector("#reposition-auto-anchor") as HTMLInputElement)
         .checked &&
@@ -1334,11 +1621,16 @@ export function openImportDialog(
     const enabled = (
       element.querySelector("#reposition-import") as HTMLInputElement
     ).checked;
+    const isPatch =
+        (element.querySelector("#reposition-method") as HTMLSelectElement)
+          .value === "patch",
+      patch = registration.current();
     const bounds = alphaBounds(
         unaligned[iPreview] || imported[iPreview],
         iOutputWidth,
       ),
       point =
+        (isPatch ? patch.matches[iPreview]?.found : undefined) ||
         manualSources.get(iPreview) ||
         (bounds ? sourceAnchor(bounds, sourcePreset) : null);
     element.querySelector("#reposition-source-anchor-info")!.textContent = point
@@ -1364,11 +1656,12 @@ export function openImportDialog(
         canvas,
         marker: targetMarker,
         point: {
-          x: numberValue(element, "reposition-x"),
-          y: numberValue(element, "reposition-y"),
+          x: isPatch ? patch.point.x : numberValue(element, "reposition-x"),
+          y: isPatch ? patch.point.y : numberValue(element, "reposition-y"),
         },
       },
     ].forEach(({ canvas, marker, point }) => {
+      marker.classList.toggle("patch-anchor-marker", isPatch);
       marker.hidden =
         !enabled ||
         !point ||
@@ -1383,6 +1676,9 @@ export function openImportDialog(
           canvas.clientWidth / canvas.width,
           canvas.clientHeight / canvas.height,
         );
+      marker.style.width = marker.style.height = isPatch
+        ? (patch.radius * 2 + 1) * scale + "px"
+        : "9px";
       marker.style.left =
         rect.left -
         parent.left +

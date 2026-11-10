@@ -1,0 +1,207 @@
+.registration-controls {
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+  background: #fff;
+}
+.registration-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.registration-options label {
+  margin: 0 !important;
+}
+.registration-options button,
+.registration-match button {
+  min-height: 44px;
+}
+.registration-matches {
+  max-height: 230px;
+  overflow: auto;
+  margin-top: 10px;
+}
+.registration-match {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  border-top: 1px solid #ddd;
+  padding: 8px 0;
+  font-size: 12px;
+}
+.registration-match small {
+  color: #666;
+  flex-basis: 100%;
+}
+.registration-match > span {
+  font-weight: 650;
+}
+.registration-picker {
+  --accent: #ff6200;
+  --accent-dark: #e95700;
+  width: min(1000px, 96vw);
+  max-height: 94dvh;
+  padding: 16px;
+  border: 2px solid #ff6200;
+  border-radius: 10px;
+  background: white;
+  color: #17191d;
+  overflow: auto;
+}
+.registration-picker::backdrop {
+  background: #17191d88;
+}
+.registration-picker header,
+.registration-picker footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: auto;
+  padding: 8px 0;
+  background: white;
+  border: 0;
+}
+.registration-picker h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.registration-picker p {
+  font-size: 12px;
+  color: #626262;
+  line-height: 1.7;
+}
+.registration-picker button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 14px;
+  border: 1px solid #999;
+  border-radius: 6px;
+  background: white;
+  color: #17191d;
+}
+.registration-picker button.primary {
+  background: #ff6200;
+  color: white;
+  border-color: #ff6200;
+}
+.registration-picker header svg {
+  width: 20px;
+  height: 20px;
+}
+.registration-picker footer {
+  justify-content: flex-end;
+}
+.registration-picker-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0;
+  font-size: 12px;
+}
+.registration-picker-tools label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.registration-picker-tools input {
+  accent-color: #ff6200;
+}
+.registration-picker-scroll {
+  height: min(560px, 55dvh);
+  width: 100%;
+  overflow: auto;
+  border: 1px solid #999;
+  background: #ddd;
+  touch-action: pan-x pan-y;
+}
+.registration-picker-holder {
+  position: relative;
+  min-width: 0;
+}
+.registration-picker-canvas,
+#registration-picker-canvas {
+  display: block;
+  image-rendering: pixelated;
+  background: conic-gradient(#bbb 25%, #eee 0 50%, #bbb 0 75%, #eee 0) 0/16px
+    16px;
+  cursor: crosshair;
+}
+.registration-picker-patch {
+  position: absolute;
+  pointer-events: none;
+  border: 2px solid #ff6200;
+  box-shadow:
+    0 0 0 1px white,
+    inset 0 0 0 1px white;
+}
+.registration-picker-patch::before,
+.registration-picker-patch::after {
+  content: "";
+  position: absolute;
+  background: #ff6200;
+  box-shadow: 0 0 0 1px white;
+}
+.registration-picker-patch::before {
+  width: 1px;
+  height: 100%;
+  left: 50%;
+  top: 0;
+}
+.registration-picker-patch::after {
+  height: 1px;
+  width: 100%;
+  top: 50%;
+  left: 0;
+}
+@media (max-height: 650px) {
+  .registration-picker {
+    padding: 8px 12px;
+  }
+  .registration-picker h2 {
+    font-size: 17px;
+  }
+  .registration-picker p {
+    margin: 4px 0;
+  }
+  .registration-picker-tools {
+    margin: 4px 0;
+  }
+  .registration-picker-scroll {
+    height: 42dvh;
+  }
+}
+.registration-small-patch {
+  position: absolute;
+  pointer-events: none;
+  border: 1px solid #ff6200;
+  outline: 1px solid white;
+  z-index: 2;
+}
+.registration-small-patch[hidden] {
+  display: none !important;
+}
+.registration-small-patch::before,
+.registration-small-patch::after {
+  content: "";
+  position: absolute;
+  background: #ff6200;
+  box-shadow: 0 0 0 1px white;
+}
+.registration-small-patch::before {
+  width: 1px;
+  height: 100%;
+  left: 50%;
+  top: 0;
+}
+.registration-small-patch::after {
+  height: 1px;
+  width: 100%;
+  top: 50%;
+  left: 0;
+}
