@@ -2301,6 +2301,91 @@ dialog.home-dialog {
 .home-dialog .gallery-item {
   background: #fff;
 }
+.gallery-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: auto;
+  min-width: 66px;
+  min-height: 44px;
+  padding: 8px 9px;
+  border: 1px solid #eadde2;
+  border-radius: 7px;
+  color: #aa6877;
+  background: #fff;
+}
+.gallery-delete svg,
+.delete-confirm-dialog svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+.gallery-delete span {
+  font-size: 11px;
+}
+.gallery-delete:hover {
+  color: #b54961;
+  border-color: #e4b5c0;
+  background: #fff3f5;
+}
+.delete-confirm-dialog {
+  width: min(430px, calc(100vw - 32px));
+  padding: 25px;
+}
+.delete-confirm-heading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.delete-confirm-heading > svg {
+  width: 24px;
+  height: 24px;
+  color: #bd7182;
+}
+.delete-confirm-heading h2 {
+  font-size: 20px;
+  margin: 0;
+}
+.delete-confirm-dialog p {
+  font-size: 13px;
+  line-height: 1.9;
+  color: #8395b4;
+  margin: 17px 0 22px;
+  overflow-wrap: anywhere;
+}
+.delete-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.delete-confirm-actions button {
+  min-height: 44px;
+  padding: 10px 18px;
+  font-size: 13px;
+  border: 1px solid #dde5f2;
+}
+.delete-confirm-actions .danger-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: white;
+  background: #bd6377;
+  border-color: #bd6377;
+}
+.delete-confirm-actions .danger-button:hover {
+  background: #ab5367;
+}
+.delete-confirm-dialog .delete-error {
+  color: #b35a70;
+  margin: 12px 0;
+}
 .file-drag-over::after {
   content: "放開以上傳圖片";
   position: fixed;

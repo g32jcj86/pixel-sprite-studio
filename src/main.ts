@@ -106,6 +106,8 @@ const icons: Record<string, string> = {
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 3 6 6M17 7l-1-1-11 11-1 4 4-1L19 9l-1-1 3-3a2 2 0 0 0-3-3l-3 3"/></svg>',
   move: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M2 12h20M8 6l4-4 4 4M8 18l4 4 4-4M6 8l-4 4 4 4M18 8l4 4-4 4"/></svg>',
 };
+const TRASH_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></svg>';
 const escape = (strValue: string) =>
   strValue.replace(
     /[&<>"']/g,
@@ -1096,7 +1098,7 @@ async function gallery() {
   );
   const dialog = modal(
     "我的點陣圖",
-    `<div class="start-choices"><button id="gallery-upload"><span class="start-choice-icon">↥</span><strong>上傳圖片</strong><small>單張圖片或精靈圖集</small></button><button id="gallery-new"><span class="start-choice-icon">✎</span><strong>自由繪畫</strong><small>從空白畫布開始</small></button></div><div class="start-drop-zone">拖曳圖片到這裡上傳</div><button id="gallery-import" class="start-project-import">匯入專案 JSON</button><input id="start-files" type="file" accept="image/png,image/webp,image/jpeg" multiple hidden>${entries.length ? '<h3 class="recent-title">我的作品</h3>' : ""}<div class="gallery-grid">${entries.map((entry, i) => `<div class="gallery-item"><button data-open="${i}"><canvas></canvas><strong>${escape(entry.project.name)}</strong><small>${entry.project.width} × ${entry.project.height} · ${new Date(entry.savedAt).toLocaleDateString("zh-TW")}</small></button><div class="gallery-action-thumbs">${entry.project.actions.map((item: any, j: number) => `<span><canvas data-thumb="${i}-${j}"></canvas><small>${escape(item.name)}</small></span>`).join("")}</div><button data-remove="${i}" class="gallery-delete" title="刪除作品">⌫</button></div>`).join("")}</div>`,
+    `<div class="start-choices"><button id="gallery-upload"><span class="start-choice-icon">↥</span><strong>上傳圖片</strong><small>單張圖片或精靈圖集</small></button><button id="gallery-new"><span class="start-choice-icon">✎</span><strong>自由繪畫</strong><small>從空白畫布開始</small></button></div><div class="start-drop-zone">拖曳圖片到這裡上傳</div><button id="gallery-import" class="start-project-import">匯入專案 JSON</button><input id="start-files" type="file" accept="image/png,image/webp,image/jpeg" multiple hidden>${entries.length ? '<h3 class="recent-title">我的作品</h3>' : ""}<div class="gallery-grid">${entries.map((entry, i) => `<div class="gallery-item"><button data-open="${i}"><canvas></canvas><strong>${escape(entry.project.name)}</strong><small>${entry.project.width} × ${entry.project.height} · ${new Date(entry.savedAt).toLocaleDateString("zh-TW")}</small></button><div class="gallery-action-thumbs">${entry.project.actions.map((item: any, j: number) => `<span><canvas data-thumb="${i}-${j}"></canvas><small>${escape(item.name)}</small></span>`).join("")}</div><button data-remove="${i}" class="gallery-delete" aria-label="刪除作品 ${escape(entry.project.name)}">${TRASH_ICON}<span>刪除</span></button></div>`).join("")}</div>`,
   );
   dialog.className = "home-dialog";
   const title = dialog.querySelector("h2")!;
@@ -1205,21 +1207,57 @@ async function gallery() {
     (button) =>
       (button.onclick = () => {
         const entry = entries[Number(button.dataset.remove)];
-        dialog.close();
-        confirmDialog(
-          "刪除收藏作品？",
-          `將移除「${escape(entry.project.name)}」的本機收藏。`,
-          () => {
-            const request = transaction("projects", "readwrite").delete(
-              entry.id,
-            );
-            if (entry.id === project.id) hasActiveProject = false;
-            request.onsuccess = () => gallery();
-            toast("已移除作品");
-          },
-        );
+        confirmProjectDelete(entry);
       }),
   );
+}
+function confirmProjectDelete(entry: { id: string; project: Project }) {
+  const dialog = document.createElement("dialog");
+  dialog.id = "delete-project-dialog";
+  dialog.className = "delete-confirm-dialog";
+  dialog.setAttribute("role", "alertdialog");
+  dialog.setAttribute("aria-labelledby", "delete-project-title");
+  dialog.setAttribute("aria-describedby", "delete-project-description");
+  dialog.innerHTML = `<div class="delete-confirm-heading">${TRASH_ICON}<h2 id="delete-project-title">刪除作品？</h2></div><p id="delete-project-description">「${escape(entry.project.name)}」將從此瀏覽器移除，刪除後無法復原。</p><p class="delete-error" role="alert" hidden></p><div class="delete-confirm-actions"><button id="cancel-delete" autofocus>取消</button><button id="confirm-delete" class="danger-button">${TRASH_ICON}<span>刪除作品</span></button></div>`;
+  document.body.append(dialog);
+  dialog.addEventListener("close", () => dialog.remove(), { once: true });
+  dialog
+    .querySelector("#cancel-delete")!
+    .addEventListener("click", () => dialog.close());
+  const confirm = dialog.querySelector<HTMLButtonElement>("#confirm-delete")!;
+  confirm.onclick = async () => {
+    confirm.disabled = true;
+    const isActive = hasActiveProject && entry.id === project.id;
+    if (isActive) {
+      clearTimeout(iSaveTimer);
+      hasActiveProject = false;
+    }
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const pending = db.transaction("projects", "readwrite");
+        pending.objectStore("projects").delete(entry.id);
+        pending.oncomplete = () => resolve();
+        pending.onerror = () => reject(pending.error);
+        pending.onabort = () => reject(pending.error);
+      });
+      if (isActive) {
+        history = [];
+        future = [];
+      }
+      if (localStorage.getItem("pixel-studio-last") === entry.id)
+        localStorage.removeItem("pixel-studio-last");
+      dialog.close();
+      await gallery();
+      toast("已刪除作品");
+    } catch {
+      if (isActive) hasActiveProject = true;
+      const message = dialog.querySelector<HTMLElement>(".delete-error")!;
+      message.textContent = "刪除失敗，作品仍保留。請再試一次。";
+      message.hidden = false;
+      confirm.disabled = false;
+    }
+  };
+  dialog.showModal();
 }
 function belongsToProject(entry: any) {
   return entry.project.id
