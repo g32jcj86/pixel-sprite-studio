@@ -1,3 +1,4 @@
+import { icon } from "./icons";
 import "./assets.css";
 import type { Project } from "./types";
 export type AssetProject = Project;
@@ -5,7 +6,7 @@ type Apply = (project: AssetProject) => void;
 function dialog(strTitle: string, strBody: string, apply: () => void) {
   const element = document.createElement("dialog");
   element.className = "asset-dialog";
-  element.innerHTML = `<header><h2>${strTitle}</h2><button type="button" data-close aria-label="關閉">×</button></header><section>${strBody}</section><footer><button data-close>取消</button><button class="primary" data-apply>套用變更</button></footer>`;
+  element.innerHTML = `<header><h2>${strTitle}</h2><button type="button" data-close aria-label="關閉">${icon("close")}</button></header><section>${strBody}</section><footer><button data-close>取消</button><button class="primary" data-apply>套用變更</button></footer>`;
   element
     .querySelectorAll("[data-close]")
     .forEach((button) =>
@@ -580,8 +581,7 @@ export function openImportDialog(
   const section = element.querySelector("section")!;
   const simple = document.createElement("div");
   simple.className = "import-wizard";
-  simple.innerHTML =
-    '<div class="import-mode-tabs"><button type="button" data-slice-mode="single" class="active">單張圖片</button><button type="button" data-slice-mode="sheet">動畫圖集</button></div><p id="slice-detection" role="status">選擇圖片後即可預覽。</p><div id="simple-grid-controls"></div><div class="import-output-settings"><strong>輸出每格尺寸</strong><label>預設 <select id="output-preset"><option value="native">建議尺寸</option><option>16</option><option>32</option><option>48</option><option>64</option><option>96</option><option>128</option><option>256</option><option value="custom">自訂</option></select></label><label>寬 <input id="output-width" type="number" min="1" max="256"></label><label>高 <input id="output-height" type="number" min="1" max="256"></label><button id="native-size" type="button">使用原始影格尺寸</button><button id="keep-project-size" type="button">符合目前畫布</button><label id="confirm-resize-label"><input id="confirm-resize" type="checkbox">同步縮放既有畫布與全部影格</label><p id="output-status"></p></div><div class="import-live-preview"><canvas id="frame-preview" width="32" height="32"></canvas><div><button id="slice-play" type="button">▶ 播放切格</button><input id="slice-frame" type="range" min="1" max="1" value="1"><output id="slice-frame-info">尚未載入</output></div></div>';
+  simple.innerHTML = `<div class="import-mode-tabs"><button type="button" data-slice-mode="single" class="active">單張圖片</button><button type="button" data-slice-mode="sheet">動畫圖集</button></div><p id="slice-detection" role="status">選擇圖片後即可預覽。</p><div id="simple-grid-controls"></div><div class="import-output-settings"><strong>輸出每格尺寸</strong><label>預設 <select id="output-preset"><option value="native">建議尺寸</option><option>16</option><option>32</option><option>48</option><option>64</option><option>96</option><option>128</option><option>256</option><option value="custom">自訂</option></select></label><label>寬 <input id="output-width" type="number" min="1" max="256"></label><label>高 <input id="output-height" type="number" min="1" max="256"></label><button id="native-size" type="button">使用原始影格尺寸</button><button id="keep-project-size" type="button">符合目前畫布</button><label id="confirm-resize-label"><input id="confirm-resize" type="checkbox">同步縮放既有畫布與全部影格</label><p id="output-status"></p></div><div class="import-live-preview"><canvas id="frame-preview" width="32" height="32"></canvas><div><button id="slice-play" type="button" aria-label="播放切格" aria-pressed="false">${icon("play")} 播放切格</button><input id="slice-frame" type="range" min="1" max="1" value="1"><output id="slice-frame-info">尚未載入</output></div></div>`;
   const fileListNode = section.querySelector("[data-files]")!;
   fileListNode.after(simple);
   const original = document.createElement("div");
@@ -725,9 +725,15 @@ export function openImportDialog(
         iPreview = (iPreview + 1) % imported.length;
         drawFramePreview();
       }, 150);
-    element.querySelector("#slice-play")!.textContent = iTimer
-      ? "Ⅱ 暫停"
-      : "▶ 播放切格";
+    element.querySelector("#slice-play")!.innerHTML = iTimer
+      ? icon("pause") + " 暫停"
+      : icon("play") + " 播放切格";
+    element
+      .querySelector("#slice-play")!
+      .setAttribute("aria-pressed", String(Boolean(iTimer)));
+    element
+      .querySelector("#slice-play")!
+      .setAttribute("aria-label", iTimer ? "暫停切格" : "播放切格");
   });
   element.querySelector("#slice-frame")!.addEventListener("input", () => {
     iPreview = numberValue(element, "slice-frame") - 1;
@@ -1141,7 +1147,9 @@ export function openImportDialog(
     list.replaceChildren();
     sources.forEach((source, i) => {
       const button = document.createElement("button");
-      button.textContent = `${source.name} ×`;
+      button.textContent = source.name;
+      button.insertAdjacentHTML("beforeend", icon("close"));
+      button.setAttribute("aria-label", `移除 ${source.name}`);
       button.title = "移除此檔案";
       button.onclick = () => {
         sources.splice(i, 1);

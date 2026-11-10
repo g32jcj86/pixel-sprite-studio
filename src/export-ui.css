@@ -48,12 +48,27 @@
   grid-template-columns: 1fr 1fr;
   gap: 7px;
 }
-.export-format-tabs button {
+.export-dialog .export-format-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   border: 1px solid #aaa9a2;
   background: #fff;
   min-height: 42px;
-  padding: 7px;
+  padding: 7px 4px;
   font-size: 12px;
+}
+.export-format-tabs button > span {
+  white-space: nowrap;
+}
+.export-dialog button > .ui-icon {
+  flex-shrink: 0;
+}
+.export-dialog-heading > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .export-format-tabs button.active {
   color: #17191d;
@@ -261,5 +276,12 @@
   #export-preview-canvas {
     max-height: 130px;
     width: min(130px, 100%);
+  }
+}
+@media (pointer: coarse) {
+  .export-dialog-heading > button,
+  .export-dialog-footer button {
+    min-width: 44px;
+    min-height: 44px;
   }
 }

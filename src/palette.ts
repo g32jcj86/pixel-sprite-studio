@@ -1,3 +1,4 @@
+import { icon } from "./icons";
 import "./palette.css";
 
 interface ColorFamily {
@@ -92,7 +93,7 @@ export function mountColorPanel(
   projectColors = colors;
   chooseColor = onSelect;
   editProjectPalette = onEdit;
-  panel.innerHTML = `<div class="section-label">顏色 <button id="palette-edit" title="編輯專案色盤" aria-label="編輯專案色盤">⋯</button></div><div class="color-current"><input id="color" type="color" aria-label="自訂顏色"><input id="color-hex" aria-label="自訂 HEX 顏色" maxlength="7" spellcheck="false"><button id="favorite-current" aria-label="收藏目前顏色" title="收藏目前顏色">☆</button></div><button id="open-color-library" class="color-library-button"><span class="mini-spectrum"></span><strong>256 色色庫</strong><span>›</span></button><div class="palette-mini-heading"><span>專案色盤</span><span>${colors.length} 色</span></div><div class="project-color-chips"></div><button id="open-favorites" class="favorites-link">☆ 收藏色彩 <span></span></button>`;
+  panel.innerHTML = `<div class="section-label">顏色 <button id="palette-edit" title="編輯專案色盤" aria-label="編輯專案色盤">${icon("ellipsis")}</button></div><div class="color-current"><input id="color" type="color" aria-label="自訂顏色"><input id="color-hex" aria-label="自訂 HEX 顏色" maxlength="7" spellcheck="false"><button id="favorite-current" aria-label="收藏目前顏色" title="收藏目前顏色">${icon("star")}</button></div><button id="open-color-library" class="color-library-button"><span class="mini-spectrum"></span><strong>256 色色庫</strong><span>${icon("chevronRight")}</span></button><div class="palette-mini-heading"><span>專案色盤</span><span>${colors.length} 色</span></div><div class="project-color-chips"></div><button id="open-favorites" class="favorites-link">${icon("star")} 收藏色彩 <span></span></button>`;
   panel
     .querySelector("#palette-edit")!
     .addEventListener("click", editProjectPalette);
@@ -157,7 +158,7 @@ export function updateColorSelection(color: string) {
     selected.toUpperCase();
   const hasFavorite = favorites.includes(selected);
   const button = panel.querySelector("#favorite-current")!;
-  button.textContent = hasFavorite ? "★" : "☆";
+  button.innerHTML = icon(hasFavorite ? "starFilled" : "star");
   button.setAttribute("aria-pressed", String(hasFavorite));
   panel.querySelector("#open-favorites span")!.textContent = String(
     favorites.length,
@@ -174,9 +175,9 @@ export function updateColorSelection(color: string) {
     current.style.background = selected;
     document.querySelector("#library-hex")!.textContent =
       selected.toUpperCase();
-    document.querySelector("#library-favorite")!.textContent = hasFavorite
-      ? "★ 已收藏"
-      : "☆ 收藏此色";
+    document.querySelector("#library-favorite")!.innerHTML = hasFavorite
+      ? icon("starFilled") + " 已收藏"
+      : icon("star") + " 收藏此色";
   }
 }
 function toggleFavorite() {
@@ -194,7 +195,7 @@ function openLibrary(tab: string) {
   const dialog = document.createElement("dialog");
   dialog.id = "color-library";
   dialog.className = "color-library";
-  dialog.innerHTML = `<div class="modal-heading"><div><h2>色彩庫</h2><p>依色系與明暗排列，點選即可使用。</p></div><button data-close aria-label="關閉色彩庫">×</button></div><div class="color-library-toolbar"><div class="color-tabs"><button data-color-tab="library">256 色</button><button data-color-tab="favorites">我的收藏</button><button data-color-tab="project">專案色盤</button></div><label class="color-search"><span>⌕</span><input placeholder="搜尋色系或 HEX，如 藍、#5078E8" aria-label="搜尋色系或 HEX"><button id="clear-color-search" aria-label="清除搜尋">×</button></label></div><div class="color-family-tabs"></div><div class="color-library-content" role="region" aria-label="色票"><div id="library-colors"></div></div><div class="color-library-footer"><div><span id="library-current"></span><strong id="library-hex"></strong><button id="library-favorite"></button></div><span id="color-result-count"></span><button data-close class="primary">完成</button></div>`;
+  dialog.innerHTML = `<div class="modal-heading"><div><h2>色彩庫</h2><p>依色系與明暗排列，點選即可使用。</p></div><button data-close aria-label="關閉色彩庫">${icon("close")}</button></div><div class="color-library-toolbar"><div class="color-tabs"><button data-color-tab="library">256 色</button><button data-color-tab="favorites">我的收藏</button><button data-color-tab="project">專案色盤</button></div><label class="color-search"><span>${icon("search")}</span><input placeholder="搜尋色系或 HEX，如 藍、#5078E8" aria-label="搜尋色系或 HEX"><button id="clear-color-search" aria-label="清除搜尋">${icon("close")}</button></label></div><div class="color-family-tabs"></div><div class="color-library-content" role="region" aria-label="色票"><div id="library-colors"></div></div><div class="color-library-footer"><div><span id="library-current"></span><strong id="library-hex"></strong><button id="library-favorite"></button></div><span id="color-result-count"></span><button data-close class="primary">完成</button></div>`;
   document.body.append(dialog);
   dialog.showModal();
   dialog
@@ -309,7 +310,7 @@ function renderLibraryColors() {
     empty.className = "color-empty";
     empty.textContent =
       activeTab === "favorites" && !search
-        ? "還沒有收藏。選一個顏色，再按「☆ 收藏此色」。收藏會保留於此瀏覽器，可跨專案使用。"
+        ? "還沒有收藏。選一個顏色，再按「收藏此色」。收藏會保留於此瀏覽器，可跨專案使用。"
         : "找不到符合的顏色。試試其他色系或直接輸入自訂 HEX。";
     host.append(empty);
   }

@@ -549,3 +549,46 @@
     min-height: 44px;
   }
 }
+#color-panel button svg,
+.color-library button svg,
+.color-search > span svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  vertical-align: middle;
+  pointer-events: none;
+}
+#favorite-current {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#favorite-current svg {
+  width: 21px;
+  height: 21px;
+}
+#color-panel .favorites-link {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 7px;
+}
+#library-favorite {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.color-library .modal-heading [data-close] svg {
+  width: 21px;
+  height: 21px;
+}
+.color-search > span {
+  display: inline-flex;
+  align-items: center;
+}
+.color-library .modal-heading [data-close] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

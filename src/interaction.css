@@ -176,3 +176,36 @@ kbd {
   background: #fff1e7;
   border-color: #ff6200;
 }
+.compact-tool-picker svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  vertical-align: middle;
+  pointer-events: none;
+}
+.compact-tool-buttons button svg {
+  display: block;
+  width: 21px;
+  height: 21px;
+  margin: 0 auto 3px;
+}
+.compact-brush-row button svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  margin: auto;
+}
+.compact-brush-row button small {
+  display: block;
+  font-size: 8px;
+  margin-top: 3px;
+  color: #626262;
+}
+.compact-tool-picker .compact-tool-buttons button,
+.compact-tool-picker .compact-brush-row button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}

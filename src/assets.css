@@ -421,3 +421,23 @@
     margin-bottom: 3px;
   }
 }
+.asset-dialog button:has(svg) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.asset-dialog button svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+.asset-dialog header [data-close] svg {
+  width: 20px;
+  height: 20px;
+}
+.asset-dialog [data-files] button svg {
+  width: 13px;
+  height: 13px;
+}

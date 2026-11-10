@@ -1,0 +1,124 @@
+.ui-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex: none;
+}
+button:has(> .ui-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+button[hidden] {
+  display: none !important;
+}
+@media (max-height: 650px) and (orientation: landscape) {
+  .canvas-toolbar > .canvas-size {
+    display: none;
+  }
+}
+.ui-icon-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.header-actions .header-help {
+  border: 0;
+}
+.recent-title:before {
+  content: none;
+}
+.recent-title > .ui-icon {
+  color: var(--accent, #ff6200);
+}
+.frame-duplicate-dialog {
+  width: min(590px, 94vw);
+}
+.frame-duplicate-form {
+  display: grid;
+  gap: 17px;
+}
+.frame-duplicate-source {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid #ddd;
+  border-radius: 7px;
+  padding: 14px;
+}
+.frame-duplicate-source canvas {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+  object-fit: contain;
+  background: repeating-conic-gradient(#f0f0ee 0 25%, white 0 50%) 0 0/12px 12px;
+  border: 1px solid #ccc;
+}
+.frame-duplicate-source strong {
+  display: block;
+  font-size: 14px;
+}
+.frame-duplicate-source small {
+  display: block;
+  font-size: 12px;
+  color: #777;
+  margin-top: 6px;
+}
+.frame-duplicate-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.frame-duplicate-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+.frame-duplicate-fields select {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid #888;
+  border-radius: 5px;
+  background: white;
+}
+.frame-insertion-summary {
+  margin: 0;
+  padding: 11px 13px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #6d6d6d;
+  background: #fafafa;
+  border-left: 3px solid #ff6200;
+}
+.frame-duplicate-form .modal-footer {
+  margin-top: 0;
+  gap: 10px;
+}
+.frame-duplicate-form .modal-footer button {
+  min-height: 44px;
+  padding: 10px 17px;
+  border: 1px solid #999;
+}
+@media (max-height: 650px) {
+  .frame-duplicate-dialog {
+    padding: 18px;
+  }
+  .frame-duplicate-dialog .modal-heading {
+    margin-bottom: 13px;
+  }
+  .frame-duplicate-form {
+    gap: 12px;
+  }
+  .frame-duplicate-source {
+    padding: 10px 13px;
+  }
+  .frame-duplicate-source canvas {
+    width: 45px;
+    height: 45px;
+  }
+  .frame-duplicate-fields {
+    gap: 12px;
+  }
+}

@@ -9,6 +9,7 @@ import {
 } from "./assets";
 import { openExportDialog } from "./export-ui";
 import { bindEditorInteractions } from "./interaction";
+import { icon } from "./icons";
 
 const root = document.querySelector<HTMLDivElement>("#app")!;
 function createBlankProject(size = 32): Project {
@@ -97,17 +98,13 @@ function createProjectId() {
 }
 let touchPixels: string[] | null = null;
 const icons: Record<string, string> = {
-  pencil:
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0 0-3l-1-1a2 2 0 0 0-3 0L5 15z"/></svg>',
-  eraser:
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 4 7 7a2 2 0 0 1 0 3l-6 6H8l-5-5a2 2 0 0 1 0-3l7-8a2 2 0 0 1 3 0ZM7 8l10 10M13 20h8"/></svg>',
-  fill: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 3 10 10-7 7-8-8 7-7M3 11h12M20 13s-3 4-3 6a3 3 0 0 0 6 0c0-2-3-6-3-6Z"/></svg>',
-  picker:
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 3 6 6M17 7l-1-1-11 11-1 4 4-1L19 9l-1-1 3-3a2 2 0 0 0-3-3l-3 3"/></svg>',
-  move: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M2 12h20M8 6l4-4 4 4M8 18l4 4 4-4M6 8l-4 4 4 4M18 8l4 4-4 4"/></svg>',
+  pencil: icon("pencil", 27),
+  eraser: icon("eraser", 27),
+  fill: icon("fill", 27),
+  picker: icon("picker", 27),
+  move: icon("move", 27),
 };
-const TRASH_ICON =
-  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></svg>';
+const TRASH_ICON = icon("trash", 20);
 const PAPER_LOGO =
   '<svg viewBox="0 0 36 42" aria-hidden="true"><path d="M3 2h22l9 9v29H3z" fill="white" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><path d="M25 2v10h9" fill="#ff6200" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><path d="M10 20h4v4h-4zm12 0h4v4h-4zM8 25h4v4H8zm16 0h4v4h-4zM12 29h4v4h-4zm4 3h4v4h-4zm4-3h4v4h-4z" fill="#ff6200"/></svg>';
 const UPLOAD_ART =
@@ -129,7 +126,7 @@ function toast(strText: string) {
   setTimeout(() => node.classList.remove("visible"), 2600);
 }
 function checkpoint() {
-  history.push(JSON.stringify(project));
+  history.push(JSON.stringify({ project, iAction, iFrame }));
   if (history.length > 80) history.shift();
   future = [];
 }
@@ -175,10 +172,11 @@ function undo(isRedo = false) {
   const source = isRedo ? future : history,
     target = isRedo ? history : future;
   if (!source.length) return;
-  target.push(JSON.stringify(project));
-  project = JSON.parse(source.pop()!);
-  iAction = Math.min(iAction, project.actions.length - 1);
-  iFrame = Math.min(iFrame, action().frames.length - 1);
+  target.push(JSON.stringify({ project, iAction, iFrame }));
+  const previous = JSON.parse(source.pop()!);
+  project = previous.project;
+  iAction = Math.min(previous.iAction, project.actions.length - 1);
+  iFrame = Math.min(previous.iFrame, action().frames.length - 1);
   render();
   changed();
 }
@@ -200,8 +198,8 @@ function paintCanvas(canvas: HTMLCanvasElement, pixels: string[], iScale = 1) {
 }
 function render() {
   document.body.classList.remove("home-open");
-  root.innerHTML = `<div class="orientation-gate"><div class="rotate-icon">▯ ↻</div><h2>請將裝置轉為橫向</h2><p>請將手機或平板轉為橫向，<br>讓畫布與工具擁有足夠空間。</p><span>我的點陣圖</span></div>
-    <header><a class="brand" href="#"><span class="brand-icon">${PAPER_LOGO}</span><span>我的點陣圖</span></a><div class="project-heading"><input id="project-name" aria-label="專案名稱" value="${escape(project.name)}"><span id="save-status">● 已自動儲存於此裝置</span></div><div class="header-actions"><button id="gallery">▦ <span>首頁</span></button><button class="primary" id="export">↓ 預覽與下載</button></div></header>
+  root.innerHTML = `<div class="orientation-gate"><div class="rotate-icon">${icon("rotatePhone", 56)}</div><h2>請將裝置轉為橫向</h2><p>請將手機或平板轉為橫向，<br>讓畫布與工具擁有足夠空間。</p><span>我的點陣圖</span></div>
+    <header><a class="brand" href="#"><span class="brand-icon">${PAPER_LOGO}</span><span>我的點陣圖</span></a><div class="project-heading"><input id="project-name" aria-label="專案名稱" value="${escape(project.name)}"><span id="save-status">● 已自動儲存於此裝置</span></div><div class="header-actions"><button id="gallery">${icon("home")}<span>首頁</span></button><button class="primary" id="export">${icon("download")}<span>預覽與下載</span></button></div></header>
     <main><aside class="left-panel"><div class="section-label">繪圖工具 </div><div class="tools">${Object.entries(
       icons,
     )
@@ -211,9 +209,9 @@ function render() {
       )
       .join(
         "",
-      )}</div><div class="brush-row"><label for="brush">筆刷大小</label><select id="brush"><option value="1">1 px</option><option value="2">2 px</option><option value="3">3 px</option></select></div><div id="color-panel"></div><div class="left-bottom"><span>⌘ Z 復原</span><span>B 鉛筆 · E 橡皮擦</span><span>Space ＋ 拖曳平移</span><button id="help">⌨ 快捷鍵與操作說明</button></div></aside>
-    <section class="workspace"><div class="canvas-toolbar"><div class="canvas-title"><span class="status-dot"></span><strong>${escape(action().name)}</strong><span class="muted">/ 第 ${iFrame + 1} 格</span></div><div class="canvas-controls"><button id="undo" title="復原 Ctrl+Z">↶</button><button id="redo" title="重做 Ctrl+Shift+Z">↷</button><i></i><button id="grid" class="${isGrid ? "toggle-on" : ""}" aria-pressed="${isGrid}" aria-label="顯示像素格線" title="顯示像素格線">▦</button><button id="onion" class="${isOnion ? "toggle-on" : ""}" title="洋蔥皮：顯示前一格">◉</button><i></i><button id="zoom-out" title="縮小">−</button><button id="zoom-reset" class="zoom-value">${Math.round(iZoom * 100)}%</button><button id="zoom-in" title="放大">＋</button></div></div><div id="canvas-area"><div class="canvas-caption">${project.width} × ${project.height} px · 透明背景</div><div id="canvas-holder"><canvas id="reference-canvas"></canvas><canvas id="onion-canvas"></canvas><canvas id="drawing-canvas" aria-label="像素繪圖畫布"></canvas><div id="grid-overlay"></div><div id="pivot-marker" title="對齊基準點">＋</div></div><div class="canvas-tip">${icons[strTool]} ${({ pencil: "鉛筆工具", eraser: "橡皮擦工具", fill: "填色工具", picker: "滴管工具", move: "平移工具" } as Record<string, string>)[strTool]}<span>滾輪縮放 · 雙指縮放</span></div></div><div class="timeline"><div class="timeline-heading"><div><strong>時間軸</strong><span id="frame-count">${action().frames.length} 格</span></div><div class="timeline-actions"><button id="duplicate-frame" title="複製目前影格">▣ 複製</button><button id="delete-frame" title="刪除目前影格">⌫</button><button id="add-frame" class="soft-button">＋ 新增影格</button></div></div><div class="timeline-bottom"><button id="play" class="play-button" aria-label="播放動畫">${isPlaying ? "Ⅱ" : "▶"}</button><div id="frames"></div><div class="timeline-fps"><label for="fps">速度</label><div><input id="fps" type="number" min="1" max="30" value="${action().fps}"><span>FPS</span></div></div></div></div></section>
-    <aside class="right-panel"><div class="section-label">動畫預覽 </div><div class="preview-box"><canvas id="preview-canvas"></canvas><span>${isPlaying ? "播放中" : "即時預覽"}</span></div><div class="preview-options"><label><input id="loop" type="checkbox" ${action().loop ? "checked" : ""}> 匯出循環</label><span>1× 原始比例</span></div><div class="divider"></div><div class="section-label">動作列表 <button id="add-action" title="新增動作">＋</button></div><div class="action-list">${project.actions.map((item, i) => `<button data-action="${i}" class="action-item ${i === iAction ? "selected" : ""}"><span class="action-symbol">${i === 0 ? "↔" : "◇"}</span><span><strong>${escape(item.name)}</strong><small>${item.frames.length} 格影格 · ${item.fps} FPS</small></span><span class="action-arrow">${i === iAction ? "●" : "›"}</span></button>`).join("")}</div><div class="action-management"><button id="rename-action">重新命名</button><button id="delete-action">刪除動作</button></div><div class="divider"></div><div class="section-label">畫布設定</div><div class="setting-row"><span>畫布尺寸</span><button id="resize">${project.width} × ${project.height} ↗</button></div><div class="setting-row"><span>對齊基準</span><button id="alignment">${project.pivot.x}, ${project.pivot.y} ⌖</button></div><div class="setting-row"><span>背景</span><span class="muted">透明</span></div><button id="templates" class="template-card"><span>＋</span><strong>新增空白作品</strong></button><button id="versions" class="version-link">◷ 版本紀錄與快照</button></aside></main><footer><span><i class="status-dot"></i> 自動儲存於此瀏覽器</span><span>${project.width} × ${project.height} px <b>·</b> ${project.actions.length} 個動作 <b>·</b> ${action().frames.length} 格影格</span></footer><div id="toast" role="status"></div><dialog id="modal"></dialog>`;
+      )}</div><div class="brush-row"><label for="brush">筆刷大小</label><select id="brush"><option value="1">1 px</option><option value="2">2 px</option><option value="3">3 px</option></select></div><div id="color-panel"></div><div class="left-bottom"><span>⌘ Z 復原</span><span>B 鉛筆 · E 橡皮擦</span><span>Space ＋ 拖曳平移</span><button id="help">${icon("keyboard", 16)}<span>快捷鍵與操作說明</span></button></div></aside>
+    <section class="workspace"><div class="canvas-toolbar"><div class="canvas-title"><span class="status-dot"></span><strong>${escape(action().name)}</strong><span class="muted">/ 第 ${iFrame + 1} 格</span></div><div class="canvas-controls"><button id="undo" title="復原 Ctrl+Z">${icon("undo")}</button><button id="redo" title="重做 Ctrl+Shift+Z">${icon("redo")}</button><i></i><button id="grid" class="${isGrid ? "toggle-on" : ""}" aria-pressed="${isGrid}" aria-label="顯示像素格線" title="顯示像素格線">${icon("grid")}</button><button id="onion" class="${isOnion ? "toggle-on" : ""}" title="洋蔥皮：顯示前一格">${icon("layers")}</button><i></i><button id="zoom-out" title="縮小">${icon("minus")}</button><button id="zoom-reset" class="zoom-value">${Math.round(iZoom * 100)}%</button><button id="zoom-in" title="放大">${icon("plus")}</button></div></div><div id="canvas-area"><div class="canvas-caption">${project.width} × ${project.height} px · 透明背景</div><div id="canvas-holder"><canvas id="reference-canvas"></canvas><canvas id="onion-canvas"></canvas><canvas id="drawing-canvas" aria-label="像素繪圖畫布"></canvas><div id="grid-overlay"></div><div id="pivot-marker" title="對齊基準點">${icon("plus", 18)}</div></div><div class="canvas-tip">${icons[strTool]} ${({ pencil: "鉛筆工具", eraser: "橡皮擦工具", fill: "填色工具", picker: "滴管工具", move: "平移工具" } as Record<string, string>)[strTool]}<span>滾輪縮放 · 雙指縮放</span></div></div><div class="timeline"><div class="timeline-heading"><div><strong>時間軸</strong><span id="frame-count">${action().frames.length} 格</span></div><div class="timeline-actions"><button id="duplicate-frame" title="選擇複製影格的插入位置">${icon("copy", 17)}<span>複製</span></button><button id="delete-frame" title="刪除目前影格" aria-label="刪除目前影格">${icon("trash", 17)}</button><button id="add-frame" class="soft-button" aria-label="新增影格" title="新增影格">${icon("plus", 17)}<span>新增影格</span></button></div></div><div class="timeline-bottom"><button id="play" class="play-button" aria-label="${isPlaying ? "暫停動畫" : "播放動畫"}">${icon(isPlaying ? "pause" : "play", 20)}</button><div id="frames"></div><div class="timeline-fps"><label for="fps">速度</label><div><input id="fps" type="number" min="1" max="30" value="${action().fps}"><span>FPS</span></div></div></div></div></section>
+    <aside class="right-panel"><div class="section-label">動畫預覽 </div><div class="preview-box"><canvas id="preview-canvas"></canvas><span>${isPlaying ? "播放中" : "即時預覽"}</span></div><div class="preview-options"><label><input id="loop" type="checkbox" ${action().loop ? "checked" : ""}> 匯出循環</label><span>1× 原始比例</span></div><div class="divider"></div><div class="section-label">動作列表 <button id="add-action" title="新增動作">${icon("plus")}</button></div><div class="action-list">${project.actions.map((item, i) => `<button data-action="${i}" class="action-item ${i === iAction ? "selected" : ""}"><span class="action-symbol">${icon("film", 18)}</span><span><strong>${escape(item.name)}</strong><small>${item.frames.length} 格影格 · ${item.fps} FPS</small></span><span class="action-arrow">${icon(i === iAction ? "check" : "chevronRight", 14)}</span></button>`).join("")}</div><div class="action-management"><button id="rename-action">重新命名</button><button id="delete-action">刪除動作</button></div><div class="divider"></div><div class="section-label">畫布設定</div><div class="setting-row"><span>畫布尺寸</span><button id="resize">${project.width} × ${project.height} ${icon("expand", 14)}</button></div><div class="setting-row"><span>對齊基準</span><button id="alignment">${project.pivot.x}, ${project.pivot.y} ${icon("target", 14)}</button></div><div class="setting-row"><span>背景</span><span class="muted">透明</span></div><button id="templates" class="template-card"><span>${icon("plus", 21)}</span><strong>新增空白作品</strong></button><button id="versions" class="version-link">${icon("history", 16)}<span>版本紀錄與快照</span></button></aside></main><footer><span><i class="status-dot"></i> 自動儲存於此瀏覽器</span><span>${project.width} × ${project.height} px <b>·</b> ${project.actions.length} 個動作 <b>·</b> ${action().frames.length} 格影格</span></footer><div id="toast" role="status"></div><dialog id="modal"></dialog>`;
   mountColorPanel(
     document.querySelector<HTMLElement>("#color-panel")!,
     strColor,
@@ -233,17 +231,17 @@ function render() {
   previewDock.append(...Array.from(rightPanel.children).slice(0, 3));
   rightPanel.prepend(previewDock);
   const addAction = document.querySelector<HTMLButtonElement>("#add-action")!;
-  addAction.textContent = "＋ 新增動作";
+  addAction.innerHTML = `${icon("plus")}<span>新增動作</span>`;
   document.querySelector(".action-list")!.after(addAction);
   const toolbarResize = document.createElement("button");
   toolbarResize.className = "canvas-size";
-  toolbarResize.textContent = `${project.width} × ${project.height} ⌄`;
+  toolbarResize.innerHTML = `${project.width} × ${project.height} ${icon("chevronDown", 14)}`;
   toolbarResize.setAttribute("aria-label", "調整畫布尺寸");
   toolbarResize.onclick = () => openResizeDialog(project, applyCurrentProject);
   document.querySelector(".canvas-controls")!.before(toolbarResize);
   const headerHelp = document.createElement("button");
   headerHelp.className = "header-help";
-  headerHelp.textContent = "？";
+  headerHelp.innerHTML = icon("help", 25);
   headerHelp.setAttribute("aria-label", "操作說明");
   headerHelp.onclick = () =>
     (document.querySelector("#help") as HTMLButtonElement).click();
@@ -274,7 +272,7 @@ function render() {
   };
   document.querySelector(".preview-options>span")!.replaceWith(previewToggle);
   const background = document.createElement("button");
-  background.textContent = isDarkTransparency ? "深色棋盤 ▧" : "淺色棋盤 ▧";
+  background.innerHTML = `${icon("checker", 15)}<span>${isDarkTransparency ? "深色棋盤" : "淺色棋盤"}</span>`;
   background.onclick = () => {
     isDarkTransparency = !isDarkTransparency;
     render();
@@ -301,13 +299,13 @@ function render() {
   };
   document.querySelector("#templates")!.before(opacity);
   const more = document.createElement("button");
-  more.textContent = "⋯";
+  more.innerHTML = icon("ellipsis");
   more.title = "影格操作與位移";
   more.onclick = frameMenu;
   timelineActions.prepend(more);
   const actions = document.querySelector(".action-management")!;
   const duplicate = document.createElement("button");
-  duplicate.textContent = "複製";
+  duplicate.innerHTML = `${icon("copy", 14)}<span>複製</span>`;
   duplicate.onclick = () =>
     textDialog("複製動作", "新動作名稱", `${action().name} 副本`, (strName) => {
       checkpoint();
@@ -425,6 +423,9 @@ function renderTimeline() {
       changed();
     };
   });
+  frames
+    .querySelector(".selected")
+    ?.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 function point(event: PointerEvent) {
   const bounds = document
@@ -589,13 +590,7 @@ function bind() {
     render();
     changed();
   });
-  click("duplicate-frame", () => {
-    checkpoint();
-    action().frames.splice(iFrame + 1, 0, structuredClone(frame()));
-    iFrame++;
-    render();
-    changed();
-  });
+  click("duplicate-frame", duplicateFrameDialog);
   click("delete-frame", () => {
     if (action().frames.length === 1) return toast("至少需要保留一格影格");
     checkpoint();
@@ -765,7 +760,10 @@ function play() {
   clearTimeout(iPlayback);
   isPlaying = true;
   const button = document.querySelector("#play");
-  if (button) button.textContent = "Ⅱ";
+  if (button) {
+    button.innerHTML = icon("pause", 20);
+    button.setAttribute("aria-label", "暫停動畫");
+  }
   iPlayback = window.setTimeout(function tick() {
     if (!isPlaying) return;
     iPreviewFrame = (iPreviewFrame + 1) % action().frames.length;
@@ -787,7 +785,10 @@ function stopPlayback() {
   isPlaying = false;
   clearTimeout(iPlayback);
   const button = document.querySelector("#play");
-  if (button) button.textContent = "▶";
+  if (button) {
+    button.innerHTML = icon("play", 20);
+    button.setAttribute("aria-label", "播放動畫");
+  }
   renderPreview();
 }
 function modal(strTitle: string, strContent: string, strFooter = "") {
@@ -795,7 +796,7 @@ function modal(strTitle: string, strContent: string, strFooter = "") {
   const dialog = document.createElement("dialog");
   dialog.id = "modal";
   root.append(dialog);
-  dialog.innerHTML = `<div class="modal-heading"><div><h2>${strTitle}</h2></div><button class="close-modal" aria-label="關閉">×</button></div>${strContent}${strFooter}`;
+  dialog.innerHTML = `<div class="modal-heading"><div><h2>${strTitle}</h2></div><button class="close-modal" aria-label="關閉">${icon("close", 21)}</button></div>${strContent}${strFooter}`;
   dialog
     .querySelector(".close-modal")!
     .addEventListener("click", () => dialog.close());
@@ -845,7 +846,7 @@ function templates() {
       [16, 32, 64, 128]
         .map(
           (size) =>
-            `<button data-template="${size}"><span class="template-emoji">▦</span><strong>${size} × ${size}</strong><small>空白畫布</small></button>`,
+            `<button data-template="${size}"><span class="template-emoji">${icon("grid", 32)}</span><strong>${size} × ${size}</strong><small>空白畫布</small></button>`,
         )
         .join("") +
       "</div>",
@@ -1024,10 +1025,75 @@ function isValidProject(candidate: any): candidate is Project {
     )
   );
 }
+function duplicateFrameDialog() {
+  const iSourceAction = iAction,
+    iSourceFrame = iFrame;
+  const source = frame();
+  const dialog = modal(
+    "複製影格",
+    `<form id="duplicate-frame-form" class="frame-duplicate-form"><div class="frame-duplicate-source"><canvas aria-label="來源影格預覽"></canvas><div><strong>${escape(action().name)} · 第 ${iFrame + 1} 格</strong><small>像素與參考圖會各自複製，可獨立編輯。</small></div></div><div class="frame-duplicate-fields"><label>目的動作<select id="duplicate-action">${project.actions.map((item, i) => `<option value="${i}" ${i === iAction ? "selected" : ""}>${escape(item.name)}（${item.frames.length} 格）</option>`).join("")}</select></label><label>插入位置<select id="duplicate-position" required></select></label></div><p id="duplicate-summary" class="frame-insertion-summary" role="status"></p><div class="modal-footer"><button id="duplicate-cancel" type="button">取消</button><button id="duplicate-confirm" class="primary" type="submit">${icon("copy")}<span>複製影格</span></button></div></form>`,
+  );
+  dialog.classList.add("frame-duplicate-dialog");
+  paintCanvas(dialog.querySelector("canvas")!, source.pixels);
+  const destination =
+    dialog.querySelector<HTMLSelectElement>("#duplicate-action")!;
+  const position = dialog.querySelector<HTMLSelectElement>(
+    "#duplicate-position",
+  )!;
+  const insertionIndex = () => {
+    const iTarget = Number(destination.value),
+      frames = project.actions[iTarget].frames;
+    if (position.value === "after") return iSourceFrame + 1;
+    if (position.value === "before") return iSourceFrame;
+    if (position.value === "first") return 0;
+    if (position.value === "last") return frames.length;
+    return Number(position.value.replace("boundary-", ""));
+  };
+  const summary = () => {
+    const target = project.actions[Number(destination.value)];
+    dialog.querySelector("#duplicate-summary")!.textContent =
+      `複製後會選取「${target.name}」第 ${insertionIndex() + 1} 格。此動作維持 ${target.fps} FPS、${target.loop ? "循環" : "不循環"}設定。`;
+  };
+  const updatePositions = () => {
+    const iTarget = Number(destination.value),
+      frames = project.actions[iTarget].frames;
+    const isSame = iTarget === iSourceAction;
+    position.innerHTML = `<optgroup label="快速位置">${isSame ? '<option value="after">目前影格之後</option><option value="before">目前影格之前</option>' : ""}<option value="first">第一格</option><option value="last">最後一格</option></optgroup><optgroup label="指定插入位置">${Array.from({ length: frames.length + 1 }, (_, i) => `<option value="boundary-${i}">${i === 0 ? "第 1 格之前" : i === frames.length ? `第 ${i} 格之後` : `第 ${i} 格與第 ${i + 1} 格之間`}</option>`).join("")}</optgroup>`;
+    position.value = isSame ? "after" : "last";
+    summary();
+  };
+  destination.onchange = updatePositions;
+  position.onchange = summary;
+  dialog
+    .querySelector("#duplicate-cancel")!
+    .addEventListener("click", () => dialog.close());
+  dialog.querySelector<HTMLFormElement>("form")!.onsubmit = (event) => {
+    event.preventDefault();
+    const iTarget = Number(destination.value),
+      iInsert = insertionIndex();
+    if (
+      !Number.isInteger(iTarget) ||
+      !project.actions[iTarget] ||
+      !Number.isInteger(iInsert) ||
+      iInsert < 0 ||
+      iInsert > project.actions[iTarget].frames.length ||
+      !position.value
+    )
+      return;
+    checkpoint();
+    project.actions[iTarget].frames.splice(iInsert, 0, structuredClone(source));
+    iAction = iTarget;
+    iFrame = iInsert;
+    dialog.close();
+    render();
+    changed();
+  };
+  updatePositions();
+}
 function frameMenu() {
   const dialog = modal(
     "影格操作",
-    '<div class="nudge-layout"><div><h3>角色位移</h3><p class="tiny">每次移動 1 px，畫布外的像素會裁切。</p><div class="nudge-buttons"><button data-nudge="0,-1">↑</button><button data-nudge="-1,0">←</button><button data-nudge="1,0">→</button><button data-nudge="0,1">↓</button></div></div><div><h3>動作整理</h3><div class="export-options"><button id="frame-left"><strong>影格向前移</strong></button><button id="frame-right"><strong>影格向後移</strong></button><button id="new-role"><strong>從目前姿勢建立新角色</strong><small>保留色盤與尺寸，以這一格重新開始</small></button></div></div></div>',
+    `<div class="nudge-layout"><div><h3>角色位移</h3><p class="tiny">每次移動 1 px，畫布外的像素會裁切。</p><div class="nudge-buttons"><button data-nudge="0,-1">${icon("arrowUp")}</button><button data-nudge="-1,0">${icon("arrowLeft")}</button><button data-nudge="1,0">${icon("arrowRight")}</button><button data-nudge="0,1">${icon("arrowDown")}</button></div></div><div><h3>動作整理</h3><div class="export-options"><button id="frame-left"><strong>影格向前移</strong></button><button id="frame-right"><strong>影格向後移</strong></button><button id="new-role"><strong>從目前姿勢建立新角色</strong><small>保留色盤與尺寸，以這一格重新開始</small></button></div></div></div>`,
   );
   dialog.querySelectorAll<HTMLButtonElement>("[data-nudge]").forEach(
     (button) =>
@@ -1051,6 +1117,18 @@ function frameMenu() {
         toast("已移動 1 px");
       }),
   );
+  const nudgeLabels: Record<string, string> = {
+    "0,-1": "向上移動一像素",
+    "-1,0": "向左移動一像素",
+    "1,0": "向右移動一像素",
+    "0,1": "向下移動一像素",
+  };
+  dialog
+    .querySelectorAll<HTMLButtonElement>("[data-nudge]")
+    .forEach((button) => {
+      button.title = nudgeLabels[button.dataset.nudge!];
+      button.setAttribute("aria-label", button.title);
+    });
   const reorder = (iDelta: number) => {
     const iTarget = iFrame + iDelta;
     if (iTarget < 0 || iTarget >= action().frames.length)
@@ -1131,12 +1209,15 @@ async function gallery() {
   );
   const dialog = modal(
     "我的點陣圖",
-    `<div class="start-choices"><button id="gallery-upload"><span class="start-card-drop">${UPLOAD_ART}<span>將圖片拖放到這裡</span></span><strong>↥ 上傳圖片</strong></button><button id="gallery-new"><span class="start-card-drawing">${DRAW_ART}</span><strong>✎ 自由繪畫</strong></button></div><button id="gallery-import" class="start-project-import">匯入專案 JSON</button><input id="start-files" type="file" accept="image/png,image/webp,image/jpeg" multiple hidden>${entries.length ? '<h3 class="recent-title">我的作品</h3>' : ""}<div class="gallery-grid">${entries.map((entry, i) => `<div class="gallery-item"><button data-open="${i}"><canvas></canvas><strong>${escape(entry.project.name)}</strong><small>${entry.project.width} × ${entry.project.height} · ${new Date(entry.savedAt).toLocaleDateString("zh-TW")}</small></button><div class="gallery-action-thumbs">${entry.project.actions.map((item: any, j: number) => `<span><canvas data-thumb="${i}-${j}"></canvas><small>${escape(item.name)}</small></span>`).join("")}</div><button data-remove="${i}" class="gallery-delete" aria-label="刪除作品 ${escape(entry.project.name)}">${TRASH_ICON}<span>刪除</span></button></div>`).join("")}</div>`,
+    `<div class="start-choices"><button id="gallery-upload"><span class="start-card-drop">${UPLOAD_ART}<span>將圖片拖放到這裡</span></span><strong>${icon("upload", 25)}上傳圖片</strong></button><button id="gallery-new"><span class="start-card-drawing">${DRAW_ART}</span><strong>${icon("pencil", 25)}自由繪畫</strong></button></div><button id="gallery-import" class="start-project-import">匯入專案 JSON</button><input id="start-files" type="file" accept="image/png,image/webp,image/jpeg" multiple hidden>${entries.length ? '<h3 class="recent-title">我的作品</h3>' : ""}<div class="gallery-grid">${entries.map((entry, i) => `<div class="gallery-item"><button data-open="${i}"><canvas></canvas><strong>${escape(entry.project.name)}</strong><small>${entry.project.width} × ${entry.project.height} · ${new Date(entry.savedAt).toLocaleDateString("zh-TW")}</small></button><div class="gallery-action-thumbs">${entry.project.actions.map((item: any, j: number) => `<span><canvas data-thumb="${i}-${j}"></canvas><small>${escape(item.name)}</small></span>`).join("")}</div><button data-remove="${i}" class="gallery-delete" aria-label="刪除作品 ${escape(entry.project.name)}">${TRASH_ICON}<span>刪除</span></button></div>`).join("")}</div>`,
   );
   dialog.className = "home-dialog";
   const title = dialog.querySelector("h2")!;
   title.className = "home-title";
   title.prepend(document.querySelector(".brand-icon")!.cloneNode(true));
+  dialog
+    .querySelector(".recent-title")
+    ?.insertAdjacentHTML("afterbegin", icon("grid", 23));
   const close = dialog.querySelector<HTMLButtonElement>(".close-modal")!;
   close.textContent = "返回編輯";
   close.hidden = !hasActiveProject;
@@ -1201,7 +1282,7 @@ async function gallery() {
       const button = document.createElement("button");
       button.append(...item.childNodes);
       const hint = document.createElement("small");
-      hint.textContent = "描繪此動作 ↗";
+      hint.innerHTML = `描繪此動作 ${icon("chevronRight", 12)}`;
       button.append(hint);
       button.title = "以全部影格姿勢作為參考，建立新角色";
       button.onclick = () => {
@@ -1311,7 +1392,7 @@ async function versions() {
     .sort((first, second) => second.savedAt - first.savedAt);
   const dialog = modal(
     "版本紀錄",
-    `<p class="modal-intro">儲存具名版本，或還原先前的編輯進度。</p><button id="snapshot" class="primary">＋ 儲存目前版本</button><div class="versions">${entries.length ? entries.map((entry, i) => `<button data-version="${i}"><span>◷ ${escape(entry.name || "未命名快照")}<small style="display:block;margin-top:5px;color:#9da78d">${new Date(entry.savedAt).toLocaleString("zh-TW")}</small></span><span>還原 ↗</span></button>`).join("") : '<p class="empty-state">還沒有版本紀錄。點選上方按鈕儲存目前狀態。</p>'}</div>`,
+    `<p class="modal-intro">儲存具名版本，或還原先前的編輯進度。</p><button id="snapshot" class="primary">${icon("plus")}<span>儲存目前版本</span></button><div class="versions">${entries.length ? entries.map((entry, i) => `<button data-version="${i}"><span class="ui-icon-label">${icon("history", 16)} ${escape(entry.name || "未命名快照")}<small style="display:block;margin-top:5px;color:#9da78d">${new Date(entry.savedAt).toLocaleString("zh-TW")}</small></span><span class="ui-icon-label">還原 ${icon("rotate", 15)}</span></button>`).join("") : '<p class="empty-state">還沒有版本紀錄。點選上方按鈕儲存目前狀態。</p>'}</div>`,
   );
   dialog.querySelector("#snapshot")!.addEventListener("click", () => {
     dialog.close();

@@ -1,3 +1,4 @@
+import { icon } from "./icons";
 import "./interaction.css";
 let binding: AbortController | undefined;
 let resizeObserver: ResizeObserver | undefined;
@@ -27,8 +28,7 @@ export function bindEditorInteractions() {
   area.append(coordinates);
   const picker = document.createElement("details");
   picker.className = "compact-tool-picker";
-  picker.innerHTML =
-    '<summary aria-label="開啟工具與快捷鍵">工具與快捷鍵 <span>⌄</span></summary><div class="compact-tool-content"><div class="compact-tool-buttons"><button data-pick-tool="pencil" title="鉛筆 B">✎<small>B</small></button><button data-pick-tool="eraser" title="橡皮擦 E">▱<small>E</small></button><button data-pick-tool="fill" title="填色 G">◈<small>G</small></button><button data-pick-tool="picker" title="滴管 I">⌁<small>I</small></button><button data-pick-tool="move" title="平移 H">✥<small>H</small></button></div><div class="compact-brush-row"><button data-brush-step="-1" aria-label="縮小筆刷">[</button><span data-brush-label></span><button data-brush-step="1" aria-label="放大筆刷">]</button></div><div class="compact-shortcut-list"><button data-editor-command="palette">色庫 <kbd>P</kbd></button><button data-editor-command="grid">格線 <kbd>Shift G</kbd></button><button data-editor-command="previous">上一格 <kbd>←</kbd></button><button data-editor-command="next">下一格 <kbd>→</kbd></button><span>縮放 <kbd>− / ＋</kbd></span><span>播放 <kbd>Space</kbd></span><span>復原 <kbd>Ctrl / ⌘ Z</kbd></span><span>平移 <kbd>H / Space 拖曳</kbd></span></div></div>';
+  picker.innerHTML = `<summary aria-label="開啟工具與快捷鍵">工具與快捷鍵 <span>${icon("chevronDown")}</span></summary><div class="compact-tool-content"><div class="compact-tool-buttons"><button data-pick-tool="pencil" title="鉛筆 B" aria-label="鉛筆 B">${icon("pencil")}<small>B</small></button><button data-pick-tool="eraser" title="橡皮擦 E" aria-label="橡皮擦 E">${icon("eraser")}<small>E</small></button><button data-pick-tool="fill" title="填色 G" aria-label="填色 G">${icon("fill")}<small>G</small></button><button data-pick-tool="picker" title="滴管 I" aria-label="滴管 I">${icon("picker")}<small>I</small></button><button data-pick-tool="move" title="平移 H" aria-label="平移 H">${icon("move")}<small>H</small></button></div><div class="compact-brush-row"><button data-brush-step="-1" aria-label="縮小筆刷">${icon("minus")}<small>[</small></button><span data-brush-label></span><button data-brush-step="1" aria-label="放大筆刷">${icon("plus")}<small>]</small></button></div><div class="compact-shortcut-list"><button data-editor-command="palette">色庫 <kbd>P</kbd></button><button data-editor-command="grid">格線 <kbd>Shift G</kbd></button><button data-editor-command="previous">上一格 <kbd>←</kbd></button><button data-editor-command="next">下一格 <kbd>→</kbd></button><span>縮放 <kbd>− / ＋</kbd></span><span>播放 <kbd>Space</kbd></span><span>復原 <kbd>Ctrl / ⌘ Z</kbd></span><span>平移 <kbd>H / Space 拖曳</kbd></span></div></div>`;
   area.append(picker);
   picker.addEventListener("pointerdown", (event) => event.stopPropagation(), {
     signal,
@@ -49,13 +49,16 @@ export function bindEditorInteractions() {
   let pointer: { x: number; y: number } | null = null;
   let isPan = false;
   function refresh() {
-        if (picker.open) {
-            const rect = picker.querySelector('summary')!.getBoundingClientRect();
-            const content = picker.querySelector<HTMLElement>('.compact-tool-content')!;
-            content.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 274)) + 'px';
-            content.style.bottom = (window.innerHeight - rect.top) + 'px';
-            content.style.maxHeight = Math.max(90, rect.top - 8) + 'px';
-        }
+    if (picker.open) {
+      const rect = picker.querySelector("summary")!.getBoundingClientRect();
+      const content = picker.querySelector<HTMLElement>(
+        ".compact-tool-content",
+      )!;
+      content.style.left =
+        Math.max(8, Math.min(rect.left, window.innerWidth - 274)) + "px";
+      content.style.bottom = window.innerHeight - rect.top + "px";
+      content.style.maxHeight = Math.max(90, rect.top - 8) + "px";
+    }
     const brush = document.querySelector<HTMLSelectElement>("#brush");
     const strTool =
       document.querySelector<HTMLElement>("[data-tool].active")?.dataset.tool ||
@@ -101,8 +104,8 @@ export function bindEditorInteractions() {
     outline.style.height = `${(iHeight / canvas!.height) * 100}%`;
     coordinates.textContent = `X ${iX} · Y ${iY}${iBrush > 1 ? ` · ${iWidth} × ${iHeight}` : ""}`;
   }
-  picker.addEventListener('toggle', refresh, { signal });
-  window.addEventListener('resize', refresh, { signal });
+  picker.addEventListener("toggle", refresh, { signal });
+  window.addEventListener("resize", refresh, { signal });
   function stepBrush(iStep: number) {
     const select = document.querySelector<HTMLSelectElement>("#brush");
     if (!select) return;

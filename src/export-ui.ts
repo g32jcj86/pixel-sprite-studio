@@ -1,4 +1,5 @@
 import "./export-ui.css";
+import { icon } from "./icons";
 import type { Project } from "./types";
 import {
   downloadBlob,
@@ -31,10 +32,10 @@ export function openExportDialog(
   const dialog = document.createElement("dialog");
   dialog.className = "export-dialog";
   dialog.id = "export-dialog";
-  dialog.innerHTML = `<div class="export-dialog-heading"><div><h2>下載作品</h2><p>先預覽內容，再確認下載。</p></div><button data-export-close aria-label="關閉下載視窗">×</button></div>
-        <div class="export-dialog-body"><section class="export-config"><div class="export-format-tabs" aria-label="下載格式"><button data-export-kind="png">PNG 圖片</button><button data-export-kind="web">Web 動畫</button><button data-export-kind="godot">Godot 素材</button><button data-export-kind="project">專案備份</button></div><div id="export-scope"></div><div class="export-file-list"><h3>下載內容</h3><ul id="export-files"></ul></div></section>
-        <section class="export-inspection"><div class="export-preview-heading"><h3 id="export-preview-title">圖片預覽</h3><select id="export-preview-action" aria-label="預覽動作"></select><button id="export-replay">重新播放</button></div><div class="export-artboard"><canvas id="export-preview-canvas" aria-label="實際匯出像素預覽"></canvas></div><p id="export-preview-info"></p><div id="export-metadata"></div><p class="export-preview-note" id="export-note"></p></section></div>
-        <div class="export-dialog-footer"><span id="export-status" role="status"></span><button data-export-close>取消</button><button id="export-confirm" class="primary">下載 PNG</button></div>`;
+  dialog.innerHTML = `<div class="export-dialog-heading"><div><h2>下載作品</h2><p>先預覽內容，再確認下載。</p></div><button data-export-close aria-label="關閉下載視窗">${icon('close', 20)}</button></div>
+        <div class="export-dialog-body"><section class="export-config"><div class="export-format-tabs" aria-label="下載格式"><button data-export-kind="png">${icon('image', 16)}<span>PNG 圖片</span></button><button data-export-kind="web">${icon('film', 16)}<span>Web 動畫</span></button><button data-export-kind="godot">${icon('gamepad', 16)}<span>Godot 素材</span></button><button data-export-kind="project">${icon('file', 16)}<span>專案備份</span></button></div><div id="export-scope"></div><div class="export-file-list"><h3>下載內容</h3><ul id="export-files"></ul></div></section>
+        <section class="export-inspection"><div class="export-preview-heading"><h3 id="export-preview-title">圖片預覽</h3><select id="export-preview-action" aria-label="預覽動作"></select><button id="export-replay">${icon('rotate', 15)}<span>重新播放</span></button></div><div class="export-artboard"><canvas id="export-preview-canvas" aria-label="實際匯出像素預覽"></canvas></div><p id="export-preview-info"></p><div id="export-metadata"></div><p class="export-preview-note" id="export-note"></p></section></div>
+        <div class="export-dialog-footer"><span id="export-status" role="status"></span><button data-export-close>${icon('close', 15)}<span>取消</span></button><button id="export-confirm" class="primary">${icon('download', 16)}<span>下載 PNG</span></button></div>`;
   document.body.append(dialog);
   const canvas = dialog.querySelector<HTMLCanvasElement>(
     "#export-preview-canvas",
@@ -107,7 +108,7 @@ export function openExportDialog(
       item.textContent = name;
       files.append(item);
     });
-    confirm.textContent = labels[kind];
+    confirm.innerHTML = `${icon('download', 16)}<span>${labels[kind]}</span>`;
     confirm.disabled = isAnimation && !selected.size;
     dialog.querySelector("#export-preview-title")!.textContent =
       kind === "png"
@@ -129,8 +130,7 @@ export function openExportDialog(
       scope.append(heading);
       const all = document.createElement("button");
       all.className = "export-select-all";
-      all.textContent =
-        selected.size === project.actions.length ? "取消全選" : "選擇全部";
+      all.innerHTML = `${icon('check', 14)}<span>${selected.size === project.actions.length ? "取消全選" : "選擇全部"}</span>`;
       all.onclick = () => {
         if (selected.size === project.actions.length) selected.clear();
         else project.actions.forEach((_, i) => selected.add(i));
