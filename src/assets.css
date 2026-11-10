@@ -483,3 +483,85 @@
   border-left: 3px solid #ff6200;
   padding-left: 9px;
 }
+.import-reposition {
+  margin: 12px 0;
+  border: 1px solid #b8b8b8;
+  border-radius: 8px;
+  padding: 12px;
+}
+.import-reposition [hidden],
+.import-before-position[hidden] {
+  display: none !important;
+}
+.reposition-enable {
+  min-height: 44px;
+  font-weight: 700;
+  margin: 0 !important;
+}
+#reposition-frames {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  max-height: 160px;
+  overflow: auto;
+}
+#reposition-frames label {
+  min-height: 36px;
+  margin: 0;
+  font-size: 12px;
+}
+#reposition-frames span {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+.reposition-nudge,
+.alignment-nudge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0;
+}
+.reposition-nudge button,
+.alignment-nudge button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px;
+}
+#reposition-status.is-error {
+  color: #b3261e;
+}
+.import-before-position {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+#frame-preview-before {
+  width: 180px;
+  height: 180px;
+  flex-shrink: 0;
+  image-rendering: pixelated;
+  object-fit: contain;
+  background: conic-gradient(#eee 25%, #fff 0 50%, #eee 0 75%, #fff 0) 0/16px
+    16px;
+  border: 1px solid #aaa;
+}
+.import-live-preview {
+  flex-wrap: wrap;
+}
+@media (max-height: 650px), (max-width: 700px) {
+  #frame-preview-before {
+    width: 140px;
+    height: 140px;
+  }
+}
+.import-after-position {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+.import-after-position > span[hidden] {
+  display: none;
+}

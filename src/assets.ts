@@ -241,17 +241,45 @@ export function openPaletteDialog(project: AssetProject, onApply: Apply) {
   element.addEventListener("change", update);
   update();
 }
+function alphaBounds(pixels: string[], width: number) {
+  let left = width,
+    right = -1,
+    top = pixels.length / width,
+    bottom = -1;
+  pixels.forEach((color, i) => {
+    if (!color || (color.length === 9 && parseInt(color.slice(7, 9), 16) === 0))
+      return;
+    const x = i % width,
+      y = Math.floor(i / width);
+    left = Math.min(left, x);
+    right = Math.max(right, x);
+    top = Math.min(top, y);
+    bottom = Math.max(bottom, y);
+  });
+  return right < 0
+    ? null
+    : {
+        left,
+        right,
+        top,
+        bottom,
+        center: Math.floor((left + right) / 2),
+        width: right - left + 1,
+        height: bottom - top + 1,
+      };
+}
 export function openAlignmentDialog(
   project: AssetProject,
   onApply: Apply,
   iAction = 0,
+  iInitialFrame = 0,
 ) {
   let next = structuredClone(project);
   const frames = project.actions[iAction].frames;
   const points = frames.map(() => ({ ...project.pivot }));
   const element = dialog(
     "批次對齊與手動定位",
-    `<p>自動以角色底部中央對齊共用定位點；手動模式可逐格點選腳底或固定特徵。</p><p>只調整目前動作，其他動作（例如跳躍）保持原狀。</p><div class="asset-frame-selection">${frames.map((_, i) => `<label><input type="checkbox" data-align-frame="${i}" checked>第 ${i + 1} 格</label>`).join("")}</div><label>模式 <select id="mode"><option value="auto">角色底部中央</option><option value="manual">逐格手動點選</option></select></label><label>影格 <input id="frame" type="number" min="1" max="${frames.length}" value="1"></label><label>目標 X <input id="px" type="number" value="${project.pivot.x}"></label><label>目標 Y <input id="py" type="number" value="${project.pivot.y}"></label><div class="asset-compare"><div>點選原始位置<canvas data-source class="asset-preview"></canvas></div><div>對齊預覽<canvas data-result class="asset-preview"></canvas></div></div><p data-info></p>`,
+    `<p>自動以角色底部中央對齊共用定位點；手動模式可逐格點選腳底或固定特徵。</p><p>只調整目前動作，其他動作（例如跳躍）保持原狀。</p><div class="asset-frame-selection">${frames.map((_, i) => `<label><input type="checkbox" data-align-frame="${i}" checked>第 ${i + 1} 格</label>`).join("")}</div><label>模式 <select id="mode"><option value="auto">角色底部中央</option><option value="manual">逐格手動點選</option></select></label><label>影格 <input id="frame" type="number" min="1" max="${frames.length}" value="${Math.max(1, Math.min(frames.length, iInitialFrame + 1))}"></label><label>目標 X <input id="px" type="number" value="${project.pivot.x}"></label><label>目標 Y <input id="py" type="number" value="${project.pivot.y}"></label><label><input id="alignment-onion" type="checkbox" checked>前後影格洋蔥皮</label><div class="alignment-nudge"><span>微調目前格</span><button type="button" data-alignment-nudge="-1,0" aria-label="目前格向左一像素">${icon("arrowLeft")}</button><button type="button" data-alignment-nudge="0,-1" aria-label="目前格向上一像素">${icon("arrowUp")}</button><button type="button" data-alignment-nudge="0,1" aria-label="目前格向下一像素">${icon("arrowDown")}</button><button type="button" data-alignment-nudge="1,0" aria-label="目前格向右一像素">${icon("arrowRight")}</button></div><div class="asset-compare"><div>點選原始位置<canvas data-source class="asset-preview"></canvas></div><div>對齊預覽<canvas data-result class="asset-preview"></canvas></div></div><p data-info></p>`,
     () => {
       onApply(next);
       element.close();
@@ -281,16 +309,9 @@ export function openAlignmentDialog(
       if (
         (element.querySelector("#mode") as HTMLSelectElement).value === "auto"
       ) {
-        const indexes = frame.pixels.flatMap((strColor, i) =>
-          strColor ? [i] : [],
-        );
-        if (indexes.length) {
-          const xs = indexes.map((i) => i % project.width);
-          point = {
-            x: Math.round((Math.min(...xs) + Math.max(...xs)) / 2),
-            y: Math.max(...indexes.map((i) => Math.floor(i / project.width))),
-          };
-        }
+        const bounds = alphaBounds(frame.pixels, project.width);
+        if (bounds) point = { x: bounds.center, y: bounds.bottom };
+        points[iCurrent] = point;
       }
       frame.pixels = mapSize(
         frame.pixels,
@@ -326,9 +347,50 @@ export function openAlignmentDialog(
       project.width,
       project.height,
     );
+    if (
+      (element.querySelector("#alignment-onion") as HTMLInputElement).checked
+    ) {
+      [
+        {
+          canvas: element.querySelector<HTMLCanvasElement>("[data-source]")!,
+          list: frames,
+        },
+        {
+          canvas: element.querySelector<HTMLCanvasElement>("[data-result]")!,
+          list: next.actions[iAction].frames,
+        },
+      ].forEach(({ canvas, list }) => {
+        draw(canvas, [], project.width, project.height);
+        const context = canvas.getContext("2d")!,
+          temp = document.createElement("canvas");
+        [iFrame - 1, iFrame + 1].forEach((i) => {
+          if (!list[i]) return;
+          draw(temp, list[i].pixels, project.width, project.height);
+          context.globalAlpha = 0.18;
+          context.drawImage(temp, 0, 0);
+        });
+        draw(temp, list[iFrame].pixels, project.width, project.height);
+        context.globalAlpha = 1;
+        context.drawImage(temp, 0, 0);
+      });
+    }
     element.querySelector("[data-info]")!.textContent =
       `第 ${iFrame + 1} 格 · 手動定位 (${points[iFrame].x}, ${points[iFrame].y}) · 超出畫布部分將裁切`;
   };
+  element
+    .querySelectorAll<HTMLElement>("[data-alignment-nudge]")
+    .forEach((button) =>
+      button.addEventListener("click", () => {
+        const i = Math.max(
+          0,
+          Math.min(frames.length - 1, numberValue(element, "frame") - 1),
+        );
+        const [x, y] = button.dataset.alignmentNudge!.split(",").map(Number);
+        points[i] = { x: points[i].x - x, y: points[i].y - y };
+        (element.querySelector("#mode") as HTMLSelectElement).value = "manual";
+        update();
+      }),
+    );
   element.querySelector("[data-source]")!.addEventListener("click", (event) => {
     const mouse = event as MouseEvent;
     const canvas = event.target as HTMLCanvasElement;
@@ -482,6 +544,10 @@ export function openImportDialog(
     checker: CheckerModel | null;
   }[] = [];
   let imported: string[][] = [];
+  let unaligned: string[][] = [];
+  let repositionValid = true;
+  const repositionExcluded = new Set<number>();
+  const manualOffsets = new Map<number, { x: number; y: number }>();
   let cellRows: string[] = [];
   const skipped = new Set<number>();
   const rowNames = new Map<string, string>();
@@ -494,7 +560,7 @@ export function openImportDialog(
     () => {
       const groups = getGroups();
       if (!groups || !groups.length) return;
-      if (!validOutput()) return;
+      if (!validOutput() || !repositionValid) return;
       const next = structuredClone(project);
       if (next.width !== iOutputWidth || next.height !== iOutputHeight) {
         next.actions.forEach((action) =>
@@ -553,15 +619,15 @@ export function openImportDialog(
               isReference
                 ? {
                     pixels: Array(iOutputWidth * iOutputHeight).fill(""),
-                    reference: imported[i],
+                    reference: [...imported[i]],
                   }
-                : { pixels: imported[i] },
+                : { pixels: [...imported[i]] },
             ),
           });
         });
       } else if (isReference) {
         groups[0].indexes.forEach((iSource, i) => {
-          const pixels = imported[iSource];
+          const pixels = [...imported[iSource]];
           const target = next.actions[iAction].frames[iFrame + i];
           if (target) target.reference = pixels;
           else
@@ -574,7 +640,7 @@ export function openImportDialog(
         next.actions[iAction].frames.splice(
           iFrame + 1,
           0,
-          ...groups[0].indexes.map((i) => ({ pixels: imported[i] })),
+          ...groups[0].indexes.map((i) => ({ pixels: [...imported[i]] })),
         );
       }
       next.palette = [
@@ -587,6 +653,18 @@ export function openImportDialog(
             .map((strColor) => strColor.slice(0, 7)),
         ]),
       ].slice(0, 256);
+      if (isNewProject)
+        next.pivot = { x: Math.floor(iOutputWidth / 2), y: iOutputHeight - 1 };
+      if (
+        (element.querySelector("#reposition-import") as HTMLInputElement)
+          .checked &&
+        (element.querySelector("#reposition-update-pivot") as HTMLInputElement)
+          .checked
+      )
+        next.pivot = {
+          x: numberValue(element, "reposition-x"),
+          y: numberValue(element, "reposition-y"),
+        };
       onApply(next);
       element.close();
     },
@@ -638,6 +716,227 @@ export function openImportDialog(
   alphaCard.innerHTML =
     '<strong>圖片實際透明度</strong><p id="import-source-alpha"></p><p id="import-output-alpha"></p><label><input id="remove-baked-checker" type="checkbox">預覽移除圖片內已畫入的外連棋盤</label><p id="import-checker-status"></p>';
   simple.querySelector(".import-live-preview")!.after(alphaCard);
+  const reposition = document.createElement("div");
+  reposition.className = "import-reposition";
+  reposition.innerHTML =
+    '<label class="reposition-enable"><input id="reposition-import" type="checkbox">重新定位角色</label><div id="reposition-controls" hidden><p>以實際透明輪廓的底部中央對齊。跳躍等需保留位移的影格可取消勾選。</p><label><input id="reposition-auto-anchor" type="checkbox" checked>自動採用安全的共用腳底基準</label><label>定位 X<input id="reposition-x" type="number" value="0"></label><label>定位 Y<input id="reposition-y" type="number" value="0"></label><label><input id="reposition-update-pivot" type="checkbox">同時更新角色定位點</label><div id="reposition-frames"></div><div class="reposition-nudge"><span id="reposition-manual-label">微調目前預覽格</span><button type="button" data-reposition-nudge="-1,0" aria-label="預覽格向左一像素">' +
+    icon("arrowLeft") +
+    '</button><button type="button" data-reposition-nudge="0,-1" aria-label="預覽格向上一像素">' +
+    icon("arrowUp") +
+    '</button><button type="button" data-reposition-nudge="0,1" aria-label="預覽格向下一像素">' +
+    icon("arrowDown") +
+    '</button><button type="button" data-reposition-nudge="1,0" aria-label="預覽格向右一像素">' +
+    icon("arrowRight") +
+    '</button><button id="reposition-reset" type="button">重置手動位移</button></div><button id="reposition-background" type="button">先處理背景</button><p id="reposition-status" role="status"></p></div>';
+  simple.querySelector(".import-live-preview")!.before(reposition);
+  (
+    element.querySelector("#reposition-update-pivot") as HTMLInputElement
+  ).checked = isNewProject;
+  const beforePreview = document.createElement("div");
+  beforePreview.className = "import-before-position";
+  beforePreview.hidden = true;
+  beforePreview.innerHTML =
+    '<span>定位前</span><canvas id="frame-preview-before"></canvas>';
+  const live = simple.querySelector(".import-live-preview")!;
+  const afterPreview = document.createElement("div");
+  afterPreview.className = "import-after-position";
+  const afterCaption = document.createElement("span");
+  afterCaption.textContent = "定位後";
+  afterCaption.hidden = true;
+  const outputCanvas = live.querySelector<HTMLCanvasElement>("#frame-preview")!;
+  outputCanvas.before(afterPreview);
+  afterPreview.append(afterCaption, outputCanvas);
+  live.prepend(beforePreview);
+  function applyReposition(indexes: number[]) {
+    imported = unaligned.map((pixels) => [...pixels]);
+    repositionValid = true;
+    const enabled = (
+      element.querySelector("#reposition-import") as HTMLInputElement
+    ).checked;
+    (element.querySelector("#reposition-controls") as HTMLElement).hidden =
+      !enabled;
+    beforePreview.hidden = !enabled;
+    afterCaption.hidden = !enabled;
+    if (!enabled) return;
+    const list = element.querySelector<HTMLElement>("#reposition-frames")!;
+    if (list.dataset.count !== String(imported.length)) {
+      list.replaceChildren();
+      list.dataset.count = String(imported.length);
+      imported.forEach((_, i) => {
+        const label = document.createElement("label"),
+          check = document.createElement("input"),
+          offset = document.createElement("span");
+        check.type = "checkbox";
+        check.dataset.repositionFrame = String(i);
+        check.checked = !repositionExcluded.has(i);
+        check.onchange = () => {
+          if (check.checked) repositionExcluded.delete(i);
+          else repositionExcluded.add(i);
+          refreshGrouping();
+        };
+        offset.dataset.repositionOffset = String(i);
+        label.append(
+          check,
+          document.createTextNode("第 " + (i + 1) + " 格 "),
+          offset,
+        );
+        list.append(label);
+      });
+    }
+    const bounds = imported.map((pixels) => alphaBounds(pixels, iOutputWidth));
+    const selected = indexes.filter(
+      (i) => !repositionExcluded.has(i) && bounds[i],
+    );
+    const opaque = selected.filter(
+      (i) =>
+        !unaligned[i].some(
+          (color) =>
+            !color ||
+            (color.length === 9 && parseInt(color.slice(7, 9), 16) === 0),
+        ),
+    );
+    if (
+      (element.querySelector("#reposition-auto-anchor") as HTMLInputElement)
+        .checked &&
+      selected.length
+    ) {
+      const maxLeft = Math.max(
+          ...selected.map((i) => bounds[i]!.center - bounds[i]!.left),
+        ),
+        maxRight = Math.max(
+          ...selected.map((i) => bounds[i]!.right - bounds[i]!.center),
+        ),
+        maxHeight = Math.max(...selected.map((i) => bounds[i]!.height));
+      const preferredX = isNewProject
+          ? Math.floor(iOutputWidth / 2)
+          : Math.round((project.pivot.x * iOutputWidth) / project.width),
+        preferredY = isNewProject
+          ? iOutputHeight - 2
+          : Math.round((project.pivot.y * iOutputHeight) / project.height);
+      (element.querySelector("#reposition-x") as HTMLInputElement).value =
+        String(
+          Math.max(maxLeft, Math.min(iOutputWidth - 1 - maxRight, preferredX)),
+        );
+      (element.querySelector("#reposition-y") as HTMLInputElement).value =
+        String(
+          Math.max(maxHeight - 1, Math.min(iOutputHeight - 1, preferredY)),
+        );
+    }
+    const targetX = numberValue(element, "reposition-x"),
+      targetY = numberValue(element, "reposition-y");
+    const offsets = imported.map((_, i) => {
+      const manual = manualOffsets.get(i) || { x: 0, y: 0 };
+      return indexes.includes(i) && !repositionExcluded.has(i) && bounds[i]
+        ? {
+            x: targetX - bounds[i]!.center + manual.x,
+            y: targetY - bounds[i]!.bottom + manual.y,
+          }
+        : { x: 0, y: 0 };
+    });
+    let left = 0,
+      top = 0,
+      right = iOutputWidth - 1,
+      bottom = iOutputHeight - 1;
+    indexes.forEach((i) => {
+      if (!bounds[i]) return;
+      left = Math.min(left, bounds[i]!.left + offsets[i].x);
+      right = Math.max(right, bounds[i]!.right + offsets[i].x);
+      top = Math.min(top, bounds[i]!.top + offsets[i].y);
+      bottom = Math.max(bottom, bounds[i]!.bottom + offsets[i].y);
+    });
+    repositionValid =
+      selected.length > 0 &&
+      !opaque.length &&
+      Number.isInteger(targetX) &&
+      Number.isInteger(targetY) &&
+      left >= 0 &&
+      top >= 0 &&
+      right < iOutputWidth &&
+      bottom < iOutputHeight;
+    element.querySelector("#reposition-status")!.textContent = opaque.length
+      ? "第 " +
+        opaque.map((i) => i + 1).join("、") +
+        " 格沒有空白透明區域，無法可靠判斷角色輪廓。請先去背，或取消該格定位。"
+      : !selected.length
+        ? "請選取至少一格有像素的影格，或取消重新定位。"
+        : !repositionValid
+          ? "位置超出畫布，至少需要 " +
+            (right - left + 1) +
+            " × " +
+            (bottom - top + 1) +
+            "。不會裁切套用；請調整定位點、畫布或重置位移。"
+          : "共用腳底基準 (" +
+            targetX +
+            ", " +
+            targetY +
+            ")；保留原始像素與共用縮放，沒有裁切。";
+    element
+      .querySelector<HTMLElement>("#reposition-status")!
+      .classList.toggle("is-error", !repositionValid);
+    element
+      .querySelectorAll<HTMLElement>("[data-reposition-offset]")
+      .forEach((span) => {
+        const i = Number(span.dataset.repositionOffset);
+        span.textContent = !indexes.includes(i)
+          ? "不匯入"
+          : repositionExcluded.has(i)
+            ? "保留原位置"
+            : !bounds[i]
+              ? "空白"
+              : "X " +
+                (offsets[i].x >= 0 ? "+" : "") +
+                offsets[i].x +
+                " / Y " +
+                (offsets[i].y >= 0 ? "+" : "") +
+                offsets[i].y;
+      });
+    if (repositionValid)
+      imported = imported.map((pixels, i) =>
+        mapSize(
+          pixels,
+          iOutputWidth,
+          iOutputHeight,
+          iOutputWidth,
+          iOutputHeight,
+          false,
+          offsets[i].x,
+          offsets[i].y,
+        ),
+      );
+  }
+  element
+    .querySelector("#reposition-import")!
+    .addEventListener("change", refreshGrouping);
+  element
+    .querySelector("#reposition-auto-anchor")!
+    .addEventListener("change", refreshGrouping);
+  ["reposition-x", "reposition-y"].forEach((id) =>
+    element.querySelector("#" + id)!.addEventListener("input", () => {
+      (
+        element.querySelector("#reposition-auto-anchor") as HTMLInputElement
+      ).checked = false;
+      refreshGrouping();
+    }),
+  );
+  element.querySelectorAll<HTMLElement>("[data-reposition-nudge]").forEach(
+    (button) =>
+      (button.onclick = () => {
+        const [x, y] = button.dataset.repositionNudge!.split(",").map(Number),
+          point = manualOffsets.get(iPreview) || { x: 0, y: 0 };
+        manualOffsets.set(iPreview, { x: point.x + x, y: point.y + y });
+        refreshGrouping();
+      }),
+  );
+  element.querySelector("#reposition-reset")!.addEventListener("click", () => {
+    manualOffsets.clear();
+    refreshGrouping();
+  });
+  element
+    .querySelector("#reposition-background")!
+    .addEventListener("click", () => {
+      advanced.open = true;
+      alphaCard.scrollIntoView({ block: "center" });
+    });
   const autoFitLabel = document.createElement("label");
   autoFitLabel.innerHTML =
     '<input id="auto-fit" type="checkbox" checked>自動等比例縮放每格';
@@ -717,6 +1016,14 @@ export function openImportDialog(
     }
     iPreview = Math.min(iPreview, imported.length - 1);
     draw(canvas, imported[iPreview], iOutputWidth, iOutputHeight);
+    draw(
+      element.querySelector<HTMLCanvasElement>("#frame-preview-before")!,
+      unaligned[iPreview] || imported[iPreview],
+      iOutputWidth,
+      iOutputHeight,
+    );
+    element.querySelector("#reposition-manual-label")!.textContent =
+      "微調第 " + (iPreview + 1) + " 格";
     const alpha = alphaSummary(pixelsToRgba(imported[iPreview]));
     element.querySelector("#import-output-alpha")!.textContent =
       "本格輸出 Alpha：透明 " +
@@ -1070,6 +1377,7 @@ export function openImportDialog(
     });
     element.querySelector("[data-info]")!.textContent =
       `${sources.length} 個來源 · ${imported.length} 格（最多 256 格）· 輸出 ${iOutputWidth} × ${iOutputHeight}`;
+    unaligned = imported.map((pixels) => [...pixels]);
     renderRowGroups();
     refreshGrouping();
     drawFramePreview();
@@ -1178,8 +1486,10 @@ export function openImportDialog(
     (element.querySelector("#custom-groups-label") as HTMLElement).hidden =
       strMode !== "custom";
     const groups = getGroups();
+    applyReposition(groups?.flatMap((group) => group.indexes) || []);
     (element.querySelector("[data-apply]") as HTMLButtonElement).disabled =
       !groups?.length ||
+      !repositionValid ||
       !validOutput() ||
       !sources.length ||
       ((element.querySelector("#sheet") as HTMLInputElement).checked &&
@@ -1203,6 +1513,12 @@ export function openImportDialog(
           (skipped.has(i) ? "略過" : group?.name || "未分組");
         caption.parentElement!.classList.toggle("is-skipped", !group);
       });
+    element
+      .querySelectorAll<HTMLCanvasElement>(".asset-thumb")
+      .forEach((canvas, i) =>
+        draw(canvas, imported[i], iOutputWidth, iOutputHeight),
+      );
+    drawFramePreview();
   }
   element
     .querySelector("#group-mode")!
