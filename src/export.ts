@@ -11,7 +11,7 @@ export function downloadBlob(blob: Blob, strFileName: string) {
   setTimeout(() => URL.revokeObjectURL(strUrl), 1000);
 }
 
-function projectFileName(project: Project) {
+export function projectFileName(project: Project) {
   return (
     project.name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_").trim() || "sprite"
   );
@@ -40,18 +40,26 @@ function canvasPng(canvas: HTMLCanvasElement): Promise<Blob> {
   );
 }
 
+export function paintExportCanvas(
+  canvas: HTMLCanvasElement,
+  project: Pick<Project, "width" | "height">,
+  pixels: string[],
+) {
+  canvas.width = project.width;
+  canvas.height = project.height;
+  drawPixels(canvas.getContext("2d")!, pixels, project.width);
+}
+
 export async function exportFramePng(
   project: Project,
   iAction: number,
   iFrame: number,
 ) {
   const canvas = document.createElement("canvas");
-  canvas.width = project.width;
-  canvas.height = project.height;
-  drawPixels(
-    canvas.getContext("2d")!,
+  paintExportCanvas(
+    canvas,
+    project,
     project.actions[iAction].frames[iFrame].pixels,
-    project.width,
   );
   downloadBlob(
     await canvasPng(canvas),

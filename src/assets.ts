@@ -345,6 +345,8 @@ export function openImportDialog(
   onApply: Apply,
   iAction = 0,
   iFrame = 0,
+  initialFiles: File[] = [],
+  isChooseFiles = false,
 ) {
   const sources: { name: string; image: HTMLImageElement }[] = [];
   let imported: string[][] = [];
@@ -354,9 +356,9 @@ export function openImportDialog(
   let background: number[] | null = null;
   const element = dialog(
     "匯入圖片與 Sprite Sheet",
-    `<p>多張圖片會使用相同縮放比例。可先移除連通背景，再以最近鄰取樣保留像素邊緣。</p><input id="files" type="file" accept="image/*" multiple><div data-files></div><canvas id="source-preview" class="asset-preview" title="點選背景顏色"></canvas><p>點選原圖選取背景色；只移除與圖片外緣連通的同色區域。</p><div class="asset-fields"><label>切割方式 <select id="layout"><option value="cell">指定每格尺寸</option><option value="count">指定欄數與列數</option></select></label><label>欄數 <input id="cols" type="number" min="1" value="1"></label><label>列數 <input id="rows" type="number" min="1" value="1"></label><label>切格預設 <select id="preset"><option value="">自訂</option><option>16</option><option>32</option><option>48</option><option>64</option><option>128</option><option>256</option></select></label><label>切格寬 <input id="cw" type="number" min="1" value="${project.width}"></label><label>切格高 <input id="ch" type="number" min="1" value="${project.height}"></label><label>起點 X <input id="ox" type="number" min="0" value="0"></label><label>起點 Y <input id="oy" type="number" min="0" value="0"></label><label>水平間距 <input id="gx" type="number" min="0" value="0"></label><label>垂直間距 <input id="gy" type="number" min="0" value="0"></label><label>共用縮放倍率 <input id="scale" type="number" min="0.01" max="16" step="0.1" value="1"></label><label><input id="sheet" type="checkbox">依格線切割</label><label><input id="remove" type="checkbox">移除外緣連通背景</label><label>加入為 <select id="target"><option value="pixels">可編輯像素</option><option value="reference">參考底圖</option></select></label></div><div class="asset-grouping"><label>動作分組 <select id="group-mode"><option value="append">加入目前動作（預設）</option><option value="rows">每一列建立一個新動作</option><option value="custom">自訂影格範圍建立新動作</option></select></label><div id="row-groups"></div><label id="custom-groups-label" hidden>每行一個動作：名稱:影格範圍<textarea id="custom-groups" rows="4" placeholder="待機:1-4
+    `<p>選擇圖片，預覽後匯入。</p><input id="files" type="file" accept="image/*" multiple><div data-files></div><canvas id="source-preview" class="asset-preview" title="點選背景顏色"></canvas><p>點選圖片選取去背色。</p><div class="asset-fields"><label>切割方式 <select id="layout"><option value="cell">指定每格尺寸</option><option value="count">指定欄數與列數</option></select></label><label>欄數 <input id="cols" type="number" min="1" value="1"></label><label>列數 <input id="rows" type="number" min="1" value="1"></label><label>切格預設 <select id="preset"><option value="">自訂</option><option>16</option><option>32</option><option>48</option><option>64</option><option>128</option><option>256</option></select></label><label>切格寬 <input id="cw" type="number" min="1" value="${project.width}"></label><label>切格高 <input id="ch" type="number" min="1" value="${project.height}"></label><label>起點 X <input id="ox" type="number" min="0" value="0"></label><label>起點 Y <input id="oy" type="number" min="0" value="0"></label><label>水平間距 <input id="gx" type="number" min="0" value="0"></label><label>垂直間距 <input id="gy" type="number" min="0" value="0"></label><label>共用縮放倍率 <input id="scale" type="number" min="0.01" max="16" step="0.1" value="1"></label><label><input id="sheet" type="checkbox">依格線切割</label><label><input id="remove" type="checkbox">移除外緣連通背景</label><label>加入為 <select id="target"><option value="pixels">可編輯像素</option><option value="reference">參考底圖</option></select></label></div><div class="asset-grouping"><label>動作分組 <select id="group-mode"><option value="append">加入目前動作（預設）</option><option value="rows">每一列建立一個新動作</option><option value="custom">自訂影格範圍建立新動作</option></select></label><div id="row-groups"></div><label id="custom-groups-label" hidden>每行一個動作：名稱:影格範圍<textarea id="custom-groups" rows="4" placeholder="待機:1-4
 行走:5-8
-跳躍:9,11-12"></textarea></label><p>下方影格由 1 起編號，取消勾選可跳過空白或不需要的格子。自訂範圍未列出的影格不會匯入。</p><p id="group-error" role="alert"></p></div><div class="asset-import-previews"></div><p data-info></p>`,
+跳躍:9,11-12"></textarea></label><p>取消勾選可略過影格；自訂範圍未列出的影格也會略過。</p><p id="group-error" role="alert"></p></div><div class="asset-import-previews"></div><p data-info></p>`,
     () => {
       const groups = getGroups();
       if (!groups || !groups.length) return;
@@ -705,8 +707,7 @@ export function openImportDialog(
       list.append(button);
     });
   };
-  element.querySelector("#files")!.addEventListener("change", async (event) => {
-    const files = Array.from((event.target as HTMLInputElement).files || []);
+  async function loadFiles(files: File[]) {
     for (const file of files) {
       const strUrl = URL.createObjectURL(file);
       const image = new Image();
@@ -746,7 +747,12 @@ export function openImportDialog(
       }
     }
     update();
-  });
+  }
+  element
+    .querySelector("#files")!
+    .addEventListener("change", (event) =>
+      loadFiles(Array.from((event.target as HTMLInputElement).files || [])),
+    );
   element
     .querySelector("#source-preview")!
     .addEventListener("click", (event) => {
@@ -789,53 +795,7 @@ export function openImportDialog(
     )
     .forEach((input) => input.addEventListener("input", update));
   update();
-}
-export function createSampleProject(): AssetProject {
-  const iWidth = 32,
-    iHeight = 32;
-  const frames = Array.from({ length: 4 }, (_, iFrame) => {
-    const pixels = Array<string>(iWidth * iHeight).fill("");
-    const box = (
-      iX: number,
-      iY: number,
-      iW: number,
-      iH: number,
-      strColor: string,
-    ) => {
-      for (let i = iY; i < iY + iH; i++)
-        for (let j = iX; j < iX + iW; j++) pixels[i * iWidth + j] = strColor;
-    };
-    const iBob = iFrame % 2;
-    box(11, 4 + iBob, 10, 3, "#392c50");
-    box(9, 7 + iBob, 14, 7, "#392c50");
-    box(11, 7 + iBob, 10, 7, "#f7c796");
-    box(10, 6 + iBob, 12, 3, "#8857b7");
-    box(17, 10 + iBob, 2, 2, "#392c50");
-    box(10, 14 + iBob, 12, 9, "#8857b7");
-    box(10, 21 + iBob, 12, 2, "#e6a854");
-    box(7, 15 + iBob, 3, 7, "#f7c796");
-    box(22, 15 + iBob, 3, 7, "#f7c796");
-    box(11, 23, 4, 5 - iBob, "#394c69");
-    box(17, 23, 4, 5 - (1 - iBob), "#394c69");
-    box(9 + iBob, 28 - iBob, 6, 2, "#392c50");
-    box(17, 27 + iBob, 6, 2, "#392c50");
-    return { pixels };
-  });
-  return {
-    name: "紫帽冒險家",
-    width: iWidth,
-    height: iHeight,
-    pivot: { x: 16, y: 29 },
-    palette: [
-      "#392c50",
-      "#8857b7",
-      "#f7c796",
-      "#e6a854",
-      "#394c69",
-      "#75c9a1",
-      "#f6f0dd",
-      "#d66a74",
-    ],
-    actions: [{ name: "行走", fps: 8, loop: true, frames }],
-  };
+  if (initialFiles.length) void loadFiles(initialFiles);
+  else if (isChooseFiles)
+    (element.querySelector("#files") as HTMLInputElement).click();
 }

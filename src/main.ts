@@ -2,21 +2,52 @@ import "./style.css";
 import { mountColorPanel, updateColorSelection } from "./palette";
 import type { Project } from "./types";
 import {
-  createSampleProject,
   openImportDialog,
   openResizeDialog,
   openPaletteDialog,
   openAlignmentDialog,
 } from "./assets";
-import {
-  downloadBlob,
-  exportFramePng,
-  exportWebZip,
-  exportGodotZip,
-} from "./export";
+import { openExportDialog } from "./export-ui";
+import { bindEditorInteractions } from "./interaction";
 
 const root = document.querySelector<HTMLDivElement>("#app")!;
-let project = createSampleProject();
+function createBlankProject(size = 32): Project {
+  return {
+    name: "未命名作品",
+    width: size,
+    height: size,
+    pivot: { x: size / 2, y: size - 1 },
+    palette: [
+      "#263238",
+      "#546e7a",
+      "#90a4ae",
+      "#eceff1",
+      "#6d4c41",
+      "#a1887f",
+      "#ef5350",
+      "#ff8a65",
+      "#ffa726",
+      "#ffca28",
+      "#d4e157",
+      "#9ccc65",
+      "#66bb6a",
+      "#26a69a",
+      "#42a5f5",
+      "#ab47bc",
+    ],
+    actions: [
+      {
+        name: "動作 1",
+        fps: 8,
+        loop: true,
+        frames: [{ pixels: Array(size * size).fill("") }],
+      },
+    ],
+  };
+}
+let project = createBlankProject();
+let hasActiveProject = false,
+  iPreviewFrame = 0;
 let iAction = 0,
   iFrame = 0,
   iZoom = Math.max(
@@ -33,7 +64,7 @@ let iAction = 0,
   strColor = "#4b7863";
 let isGrid = true,
   isOnion = false,
-  isPlaying = false,
+  isPlaying = true,
   isDrawing = false,
   isSpace = false,
   hasSpaceMoved = false;
@@ -90,7 +121,6 @@ function toast(strText: string) {
   setTimeout(() => node.classList.remove("visible"), 2600);
 }
 function checkpoint() {
-  stopPlayback();
   history.push(JSON.stringify(project));
   if (history.length > 80) history.shift();
   future = [];
@@ -103,7 +133,11 @@ function changed() {
   iSaveTimer = window.setTimeout(() => saveProject(), 500);
 }
 function applyProject(next: Project) {
-  checkpoint();
+  if (project.id !== next.id) {
+    history = [];
+    future = [];
+  } else checkpoint();
+  hasActiveProject = true;
   project = next;
   iAction = 0;
   iFrame = 0;
@@ -112,6 +146,7 @@ function applyProject(next: Project) {
   changed();
 }
 function applyCurrentProject(next: Project) {
+  hasActiveProject = true;
   const hasResized =
     next.width !== project.width || next.height !== project.height;
   checkpoint();
@@ -129,7 +164,6 @@ function frame() {
   return action().frames[iFrame];
 }
 function undo(isRedo = false) {
-  stopPlayback();
   const source = isRedo ? future : history,
     target = isRedo ? history : future;
   if (!source.length) return;
@@ -157,8 +191,9 @@ function paintCanvas(canvas: HTMLCanvasElement, pixels: string[], iScale = 1) {
   });
 }
 function render() {
-  root.innerHTML = `<div class="orientation-gate"><div class="rotate-icon">▯ ↻</div><h2>請將裝置轉為橫向</h2><p>請將手機或平板轉為橫向，<br>讓畫布與工具擁有足夠空間。</p><span>點點工坊</span></div>
-    <header><a class="brand" href="#"><span class="brand-icon">▦</span><span>點點工坊</span></a><div class="project-heading"><input id="project-name" aria-label="專案名稱" value="${escape(project.name)}"><span id="save-status">● 已自動儲存於此裝置</span></div><div class="header-actions"><button id="gallery">▦ <span>我的作品</span></button><button id="import">↥ <span>匯入</span></button><button class="primary" id="export">匯出作品 ↗</button></div></header>
+  document.body.classList.remove("home-open");
+  root.innerHTML = `<div class="orientation-gate"><div class="rotate-icon">▯ ↻</div><h2>請將裝置轉為橫向</h2><p>請將手機或平板轉為橫向，<br>讓畫布與工具擁有足夠空間。</p><span>我的點陣圖</span></div>
+    <header><a class="brand" href="#"><span class="brand-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h6v6H3zm7 0h6v6h-6zm7 0h4v6h-4zM3 10h6v6H3zm7 0h6v6h-6zm7 0h4v6h-4zM3 17h6v4H3zm7 0h6v4h-6z" fill="currentColor"/></svg></span><span>我的點陣圖</span></a><div class="project-heading"><input id="project-name" aria-label="專案名稱" value="${escape(project.name)}"><span id="save-status">● 已自動儲存於此裝置</span></div><div class="header-actions"><button id="gallery">▦ <span>首頁</span></button><button class="primary" id="export">匯出作品 ↗</button></div></header>
     <main><aside class="left-panel"><div class="section-label">繪圖工具 </div><div class="tools">${Object.entries(
       icons,
     )
@@ -170,7 +205,7 @@ function render() {
         "",
       )}</div><div class="brush-row"><label for="brush">筆刷大小</label><select id="brush"><option value="1">1 px</option><option value="2">2 px</option><option value="3">3 px</option></select></div><div id="color-panel"></div><div class="left-bottom"><span>⌘ Z 復原</span><span>B 鉛筆 · E 橡皮擦</span><span>Space ＋ 拖曳平移</span><button id="help">⌨ 快捷鍵與操作說明</button></div></aside>
     <section class="workspace"><div class="canvas-toolbar"><div class="canvas-title"><span class="status-dot"></span><strong>${escape(action().name)}</strong><span class="muted">/ 第 ${iFrame + 1} 格</span></div><div class="canvas-controls"><button id="undo" title="復原 Ctrl+Z">↶</button><button id="redo" title="重做 Ctrl+Shift+Z">↷</button><i></i><button id="grid" class="${isGrid ? "toggle-on" : ""}" title="切換格線">▦</button><button id="onion" class="${isOnion ? "toggle-on" : ""}" title="洋蔥皮：顯示前一格">◉</button><i></i><button id="zoom-out" title="縮小">−</button><button id="zoom-reset" class="zoom-value">${Math.round(iZoom * 100)}%</button><button id="zoom-in" title="放大">＋</button></div></div><div id="canvas-area"><div class="canvas-caption">${project.width} × ${project.height} px · 透明背景</div><div id="canvas-holder"><canvas id="reference-canvas"></canvas><canvas id="onion-canvas"></canvas><canvas id="drawing-canvas" aria-label="像素繪圖畫布"></canvas><div id="grid-overlay"></div><div id="pivot-marker" title="對齊基準點">＋</div></div><div class="canvas-tip">${icons[strTool]} ${({ pencil: "鉛筆工具", eraser: "橡皮擦工具", fill: "填色工具", picker: "滴管工具", move: "平移工具" } as Record<string, string>)[strTool]}<span>滾輪縮放 · 雙指縮放</span></div></div><div class="timeline"><div class="timeline-heading"><div><strong>影格時間軸</strong><span id="frame-count">${action().frames.length} 格</span></div><div class="timeline-actions"><button id="duplicate-frame" title="複製目前影格">▣ 複製</button><button id="delete-frame" title="刪除目前影格">⌫</button><button id="add-frame" class="soft-button">＋ 新增影格</button></div></div><div class="timeline-bottom"><button id="play" class="play-button" aria-label="播放動畫">${isPlaying ? "Ⅱ" : "▶"}</button><div id="frames"></div><div class="timeline-fps"><label for="fps">速度</label><div><input id="fps" type="number" min="1" max="30" value="${action().fps}"><span>FPS</span></div></div></div></div></section>
-    <aside class="right-panel"><div class="section-label">動畫預覽 </div><div class="preview-box"><canvas id="preview-canvas"></canvas><span>${isPlaying ? "播放中" : "即時預覽"}</span></div><div class="preview-options"><label><input id="loop" type="checkbox" ${action().loop ? "checked" : ""}> 循環播放</label><span>1× 原始比例</span></div><div class="divider"></div><div class="section-label">動作列表 <button id="add-action" title="新增動作">＋</button></div><div class="action-list">${project.actions.map((item, i) => `<button data-action="${i}" class="action-item ${i === iAction ? "selected" : ""}"><span class="action-symbol">${i === 0 ? "↔" : "◇"}</span><span><strong>${escape(item.name)}</strong><small>${item.frames.length} 格影格 · ${item.fps} FPS</small></span><span class="action-arrow">${i === iAction ? "●" : "›"}</span></button>`).join("")}</div><div class="action-management"><button id="rename-action">重新命名</button><button id="delete-action">刪除動作</button></div><div class="divider"></div><div class="section-label">畫布設定</div><div class="setting-row"><span>畫布尺寸</span><button id="resize">${project.width} × ${project.height} ↗</button></div><div class="setting-row"><span>對齊基準</span><button id="alignment">${project.pivot.x}, ${project.pivot.y} ⌖</button></div><div class="setting-row"><span>背景</span><span class="muted">透明</span></div><button id="templates" class="template-card"><span>＋</span><strong>新增角色或範例<small>選擇尺寸與參考動作</small></strong></button><button id="versions" class="version-link">◷ 版本紀錄與快照</button></aside></main><footer><span><i class="status-dot"></i> 自動儲存於此瀏覽器</span><span>${project.width} × ${project.height} px <b>·</b> ${project.actions.length} 個動作 <b>·</b> ${action().frames.length} 格影格</span></footer><div id="toast" role="status"></div><dialog id="modal"></dialog>`;
+    <aside class="right-panel"><div class="section-label">動畫預覽 </div><div class="preview-box"><canvas id="preview-canvas"></canvas><span>${isPlaying ? "播放中" : "即時預覽"}</span></div><div class="preview-options"><label><input id="loop" type="checkbox" ${action().loop ? "checked" : ""}> 匯出循環</label><span>1× 原始比例</span></div><div class="divider"></div><div class="section-label">動作列表 <button id="add-action" title="新增動作">＋</button></div><div class="action-list">${project.actions.map((item, i) => `<button data-action="${i}" class="action-item ${i === iAction ? "selected" : ""}"><span class="action-symbol">${i === 0 ? "↔" : "◇"}</span><span><strong>${escape(item.name)}</strong><small>${item.frames.length} 格影格 · ${item.fps} FPS</small></span><span class="action-arrow">${i === iAction ? "●" : "›"}</span></button>`).join("")}</div><div class="action-management"><button id="rename-action">重新命名</button><button id="delete-action">刪除動作</button></div><div class="divider"></div><div class="section-label">畫布設定</div><div class="setting-row"><span>畫布尺寸</span><button id="resize">${project.width} × ${project.height} ↗</button></div><div class="setting-row"><span>對齊基準</span><button id="alignment">${project.pivot.x}, ${project.pivot.y} ⌖</button></div><div class="setting-row"><span>背景</span><span class="muted">透明</span></div><button id="templates" class="template-card"><span>＋</span><strong>新增作品<small>選擇空白畫布尺寸</small></strong></button><button id="versions" class="version-link">◷ 版本紀錄與快照</button></aside></main><footer><span><i class="status-dot"></i> 自動儲存於此瀏覽器</span><span>${project.width} × ${project.height} px <b>·</b> ${project.actions.length} 個動作 <b>·</b> ${action().frames.length} 格影格</span></footer><div id="toast" role="status"></div><dialog id="modal"></dialog>`;
   mountColorPanel(
     document.querySelector<HTMLElement>("#color-panel")!,
     strColor,
@@ -179,8 +214,15 @@ function render() {
     () => openPaletteDialog(project, applyCurrentProject),
   );
   bind();
+  bindEditorInteractions();
+  if (isPlaying) play();
   renderCanvases();
   renderTimeline();
+  const previewDock = document.createElement("section");
+  previewDock.className = "preview-dock";
+  const rightPanel = document.querySelector(".right-panel")!;
+  previewDock.append(...Array.from(rightPanel.children).slice(0, 3));
+  rightPanel.prepend(previewDock);
   const timelineActions = document.querySelector(".timeline-actions")!;
   const rotateButton = document.createElement("button");
   rotateButton.className = "primary";
@@ -306,8 +348,9 @@ function renderCanvases() {
   const pivot = document.querySelector<HTMLDivElement>("#pivot-marker")!;
   pivot.style.left = `${(project.pivot.x / project.width) * 100}%`;
   pivot.style.top = `${(project.pivot.y / project.height) * 100}%`;
-  paintCanvas(document.querySelector("#preview-canvas")!, frame().pixels);
+  renderPreview();
   const preview = document.querySelector<HTMLCanvasElement>("#preview-canvas")!;
+  preview.classList.toggle("original-size", isOriginalPreview);
   const previewScale = isOriginalPreview
     ? 1
     : 110 / Math.max(project.width, project.height);
@@ -449,7 +492,6 @@ function bind() {
   document.querySelectorAll<HTMLButtonElement>("[data-action]").forEach(
     (button) =>
       (button.onclick = () => {
-        stopPlayback();
         iAction = Number(button.dataset.action);
         iFrame = 0;
         render();
@@ -482,7 +524,6 @@ function bind() {
     );
     changed();
     if (isPlaying) {
-      stopPlayback();
       play();
     }
   });
@@ -508,7 +549,6 @@ function bind() {
     zoom(1);
   });
   click("add-frame", () => {
-    stopPlayback();
     checkpoint();
     action().frames.splice(iFrame + 1, 0, {
       pixels: Array(project.width * project.height).fill(""),
@@ -518,7 +558,6 @@ function bind() {
     changed();
   });
   click("duplicate-frame", () => {
-    stopPlayback();
     checkpoint();
     action().frames.splice(iFrame + 1, 0, structuredClone(frame()));
     iFrame++;
@@ -572,7 +611,7 @@ function bind() {
       },
     );
   });
-  click("import", importMenu);
+
   click("resize", () => openResizeDialog(project, applyCurrentProject));
 
   click("alignment", () =>
@@ -691,29 +730,39 @@ function bind() {
   area.addEventListener("pointercancel", end);
 }
 function play() {
+  clearTimeout(iPlayback);
   isPlaying = true;
-  document.querySelector("#play")!.textContent = "Ⅱ";
+  const button = document.querySelector("#play");
+  if (button) button.textContent = "Ⅱ";
   iPlayback = window.setTimeout(function tick() {
     if (!isPlaying) return;
-    if (iFrame === action().frames.length - 1 && !action().loop) {
-      stopPlayback();
-      return;
-    }
-    iFrame = (iFrame + 1) % action().frames.length;
-    renderCanvases();
-    renderTimeline();
+    iPreviewFrame = (iPreviewFrame + 1) % action().frames.length;
+    renderPreview();
     iPlayback = window.setTimeout(tick, 1000 / action().fps);
   }, 1000 / action().fps);
 }
+function renderPreview() {
+  const canvas = document.querySelector<HTMLCanvasElement>("#preview-canvas");
+  if (!canvas) return;
+  iPreviewFrame %= action().frames.length;
+  paintCanvas(canvas, action().frames[iPreviewFrame].pixels);
+  const label = document.querySelector(".preview-box>span");
+  if (label)
+    label.textContent = `${isPlaying ? "播放中" : "已暫停"} · ${iPreviewFrame + 1} / ${action().frames.length}`;
+}
+
 function stopPlayback() {
   isPlaying = false;
   clearTimeout(iPlayback);
   const button = document.querySelector("#play");
   if (button) button.textContent = "▶";
+  renderPreview();
 }
 function modal(strTitle: string, strContent: string, strFooter = "") {
-  stopPlayback();
-  const dialog = document.querySelector<HTMLDialogElement>("#modal")!;
+  document.querySelector("#modal")?.remove();
+  const dialog = document.createElement("dialog");
+  dialog.id = "modal";
+  root.append(dialog);
   dialog.innerHTML = `<div class="modal-heading"><div><h2>${strTitle}</h2></div><button class="close-modal" aria-label="關閉">×</button></div>${strContent}${strFooter}`;
   dialog
     .querySelector(".close-modal")!
@@ -759,99 +808,48 @@ function confirmDialog(
 }
 function templates() {
   const dialog = modal(
-    "建立角色",
-    '<p class="modal-intro">選擇空白畫布，或使用行走範例。</p><div class="template-grid"><button data-template="sample"><span class="template-emoji">▦</span><strong>紫帽冒險家</strong><small>32 × 32 · 走路循環範例</small></button><button data-template="16"><span class="template-emoji">▦</span><strong>迷你角色</strong><small>16 × 16 · 空白畫布</small></button><button data-template="32"><span class="template-emoji">▦</span><strong>經典像素</strong><small>32 × 32 · 空白畫布</small></button><button data-template="64"><span class="template-emoji">▦</span><strong>更多細節</strong><small>64 × 64 · 空白畫布</small></button></div><p class="tiny">目前作品已自動儲存至「我的作品」。</p>',
+    "自由繪畫",
+    '<p class="modal-intro">選擇空白畫布尺寸</p><div class="template-grid">' +
+      [16, 32, 64, 128]
+        .map(
+          (size) =>
+            `<button data-template="${size}"><span class="template-emoji">▦</span><strong>${size} × ${size}</strong><small>空白畫布</small></button>`,
+        )
+        .join("") +
+      "</div>",
+  );
+  dialog.addEventListener(
+    "close",
+    () => {
+      if (!hasActiveProject) gallery();
+    },
+    { once: true },
   );
   dialog.querySelectorAll<HTMLButtonElement>("[data-template]").forEach(
     (button) =>
       (button.onclick = async () => {
         await saveProject();
-        const strTemplate = button.dataset.template!;
-        const next = createSampleProject();
+        const next = createBlankProject(Number(button.dataset.template));
         next.id = createProjectId();
-        if (strTemplate !== "sample") {
-          const iSize = Number(strTemplate);
-          next.name = `${iSize} 像素的新故事`;
-          next.width = next.height = iSize;
-          next.palette = [
-            "#263238",
-            "#546e7a",
-            "#90a4ae",
-            "#eceff1",
-            "#6d4c41",
-            "#a1887f",
-            "#ef5350",
-            "#ff8a65",
-            "#ffa726",
-            "#ffca28",
-            "#d4e157",
-            "#9ccc65",
-            "#66bb6a",
-            "#26a69a",
-            "#42a5f5",
-            "#ab47bc",
-          ];
-          next.pivot = { x: iSize / 2, y: iSize - 1 };
-          next.actions = [
-            {
-              name: "待機",
-              fps: 8,
-              loop: true,
-              frames: [{ pixels: Array(iSize * iSize).fill("") }],
-            },
-          ];
-        }
+        hasActiveProject = true;
         dialog.close();
         applyProject(next);
       }),
   );
 }
-function exportMenu() {
-  const dialog = modal(
-    "匯出作品",
-    '<p class="modal-intro">選擇圖像、引擎素材包或可編輯專案。</p><div class="export-options"><button data-export="png"><strong>PNG 單格圖像</strong><small>目前影格 · 透明背景 · 原始尺寸</small></button><button data-export="web"><strong>Web 動畫素材包</strong><small>Sprite sheet + JSON + 可直接開啟的預覽</small></button><button data-export="godot"><strong>Godot 4 素材包</strong><small>PNG + SpriteFrames .tres + AnimatedSprite2D 場景</small></button><button data-export="project"><strong>可編輯專案檔</strong><small>保留所有動作、影格、參考圖與色盤 · JSON</small></button></div>',
-  );
-  dialog.querySelectorAll<HTMLButtonElement>("[data-export]").forEach(
-    (button) =>
-      (button.onclick = async () => {
-        const strKind = button.dataset.export;
-        button.disabled = true;
-        try {
-          if (strKind === "png") await exportFramePng(project, iAction, iFrame);
-          if (strKind === "web") await exportWebZip(project);
-          if (strKind === "godot") await exportGodotZip(project);
-          if (strKind === "project") {
-            const versions = db
-              ? (await getAll("versions")).filter(belongsToProject)
-              : [];
-            downloadBlob(
-              new Blob(
-                [
-                  JSON.stringify(
-                    {
-                      format: "pixel-sprite-studio",
-                      version: 1,
-                      project,
-                      versions,
-                    },
-                    null,
-                    2,
-                  ),
-                ],
-                { type: "application/json" },
-              ),
-              `${project.name}.pixel.json`,
-            );
-          }
-          toast("作品已準備下載");
-          dialog.close();
-        } catch {
-          toast("匯出失敗，請再試一次");
-          button.disabled = false;
-        }
-      }),
-  );
+
+async function exportMenu() {
+  const versions = db
+    ? (await getAll("versions")).filter(belongsToProject)
+    : [];
+  openExportDialog(project, iAction, iFrame, {
+    format: "pixel-sprite-studio",
+    version: 1,
+    project,
+    versions,
+  });
 }
+
 function importMenu() {
   const dialog = modal(
     "匯入素材或專案",
@@ -862,6 +860,9 @@ function importMenu() {
     openImportDialog(project, applyCurrentProject, iAction, iFrame);
   });
   const input = dialog.querySelector<HTMLInputElement>("#project-file")!;
+  dialog.querySelector(".close-modal")!.addEventListener("click", () => {
+    if (!hasActiveProject) gallery();
+  });
   dialog
     .querySelector("#project-import")!
     .addEventListener("click", () => input.click());
@@ -904,6 +905,37 @@ function importMenu() {
       toast("無法讀取專案，請選擇有效的工坊 JSON 檔");
     }
   };
+}
+function openImageImport(files: File[], isNew = !hasActiveProject) {
+  let hasApplied = false;
+  const base = isNew ? createBlankProject() : project;
+  if (isNew) base.actions[0].frames = [];
+  openImportDialog(
+    base,
+    (next) => {
+      hasApplied = true;
+      if (isNew)
+        next.actions = next.actions.filter((item) => item.frames.length > 0);
+      if (isNew) {
+        next.id = createProjectId();
+        next.name = files[0]?.name.replace(/\.[^.]+$/, "") || "未命名作品";
+        applyProject(next);
+      } else applyCurrentProject(next);
+    },
+    isNew ? 0 : iAction,
+    isNew ? 0 : iFrame,
+    files,
+  );
+  const dialog = [
+    ...document.querySelectorAll<HTMLDialogElement>(".asset-dialog"),
+  ].at(-1);
+  dialog?.addEventListener(
+    "close",
+    () => {
+      if (isNew && !hasApplied) gallery();
+    },
+    { once: true },
+  );
 }
 function isValidProject(candidate: any): candidate is Project {
   if (
@@ -1033,7 +1065,7 @@ function transaction(strStore: string, strMode: IDBTransactionMode) {
   return db.transaction(strStore, strMode).objectStore(strStore);
 }
 async function saveProject() {
-  if (!db) return;
+  if (!db || !hasActiveProject) return;
   project.id ||= createProjectId();
   const entry = {
     id: project.id,
@@ -1057,14 +1089,43 @@ function getAll(strStore: string): Promise<any[]> {
   });
 }
 async function gallery() {
+  document.body.classList.add("home-open");
   await saveProject();
   const entries = (await getAll("projects")).sort(
     (first, second) => second.savedAt - first.savedAt,
   );
   const dialog = modal(
-    "我的像素收藏",
-    `<p class="modal-intro">開啟既有角色，或建立新角色。</p><div class="gallery-home-actions"><button id="gallery-new" class="primary">＋ 建立新角色</button><button id="gallery-import">↥ 匯入專案或素材</button></div><div class="gallery-grid">${entries.map((entry, i) => `<div class="gallery-item"><button data-open="${i}"><canvas></canvas><strong>${escape(entry.project.name)}</strong><small>${entry.project.width} × ${entry.project.height} · ${new Date(entry.savedAt).toLocaleDateString("zh-TW")}</small></button><div class="gallery-action-thumbs">${entry.project.actions.map((item: any, j: number) => `<span><canvas data-thumb="${i}-${j}"></canvas><small>${escape(item.name)}</small></span>`).join("")}</div><button data-remove="${i}" class="gallery-delete" title="刪除作品">⌫</button></div>`).join("")}</div>`,
+    "我的點陣圖",
+    `<div class="start-choices"><button id="gallery-upload"><span class="start-choice-icon">↥</span><strong>上傳圖片</strong><small>單張圖片或精靈圖集</small></button><button id="gallery-new"><span class="start-choice-icon">✎</span><strong>自由繪畫</strong><small>從空白畫布開始</small></button></div><div class="start-drop-zone">拖曳圖片到這裡上傳</div><button id="gallery-import" class="start-project-import">匯入專案 JSON</button><input id="start-files" type="file" accept="image/png,image/webp,image/jpeg" multiple hidden>${entries.length ? '<h3 class="recent-title">我的作品</h3>' : ""}<div class="gallery-grid">${entries.map((entry, i) => `<div class="gallery-item"><button data-open="${i}"><canvas></canvas><strong>${escape(entry.project.name)}</strong><small>${entry.project.width} × ${entry.project.height} · ${new Date(entry.savedAt).toLocaleDateString("zh-TW")}</small></button><div class="gallery-action-thumbs">${entry.project.actions.map((item: any, j: number) => `<span><canvas data-thumb="${i}-${j}"></canvas><small>${escape(item.name)}</small></span>`).join("")}</div><button data-remove="${i}" class="gallery-delete" title="刪除作品">⌫</button></div>`).join("")}</div>`,
   );
+  dialog.className = "home-dialog";
+  const title = dialog.querySelector("h2")!;
+  title.className = "home-title";
+  title.prepend(document.querySelector(".brand-icon")!.cloneNode(true));
+  const close = dialog.querySelector<HTMLButtonElement>(".close-modal")!;
+  close.textContent = "返回編輯";
+  close.hidden = !hasActiveProject;
+  dialog.oncancel = (event) => {
+    if (!hasActiveProject) event.preventDefault();
+  };
+  dialog.addEventListener(
+    "close",
+    () => {
+      document.body.classList.toggle("home-open", !hasActiveProject);
+      dialog.className = "";
+    },
+    { once: true },
+  );
+  const picker = dialog.querySelector<HTMLInputElement>("#start-files")!;
+  dialog
+    .querySelector("#gallery-upload")!
+    .addEventListener("click", () => picker.click());
+  picker.onchange = () => {
+    const files = [...(picker.files || [])];
+    if (!files.length) return;
+    dialog.close();
+    openImageImport(files, true);
+  };
   dialog.querySelector("#gallery-new")!.addEventListener("click", () => {
     dialog.close();
     templates();
@@ -1072,6 +1133,7 @@ async function gallery() {
   dialog.querySelector("#gallery-import")!.addEventListener("click", () => {
     dialog.close();
     importMenu();
+    (document.querySelector("#project-file") as HTMLInputElement).click();
   });
   entries.forEach((entry, i) =>
     entry.project.actions.forEach((item: any, j: number) => {
@@ -1148,8 +1210,12 @@ async function gallery() {
           "刪除收藏作品？",
           `將移除「${escape(entry.project.name)}」的本機收藏。`,
           () => {
-            transaction("projects", "readwrite").delete(entry.id);
-            toast("已移除收藏作品");
+            const request = transaction("projects", "readwrite").delete(
+              entry.id,
+            );
+            if (entry.id === project.id) hasActiveProject = false;
+            request.onsuccess = () => gallery();
+            toast("已移除作品");
           },
         );
       }),
@@ -1286,6 +1352,30 @@ function fitCanvas() {
   }
 }
 window.addEventListener("resize", fitCanvas);
+document.addEventListener("dragover", (event) => {
+  if (!event.dataTransfer?.types.includes("Files")) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "copy";
+  document.body.classList.add("file-drag-over");
+});
+document.addEventListener("dragleave", (event) => {
+  if (!event.relatedTarget) document.body.classList.remove("file-drag-over");
+});
+document.addEventListener("drop", (event) => {
+  document.body.classList.remove("file-drag-over");
+  const files = [...(event.dataTransfer?.files || [])].filter((file) =>
+    file.type.startsWith("image/"),
+  );
+  if (!event.dataTransfer?.types.includes("Files")) return;
+  event.preventDefault();
+  if (!files.length) return toast("請拖曳圖片；專案 JSON 可從首頁匯入");
+  const isNew = document.body.classList.contains("home-open");
+  document
+    .querySelectorAll<HTMLDialogElement>("dialog[open]")
+    .forEach((dialog) => dialog.close());
+  openImageImport(files, isNew);
+});
+document.body.classList.add("home-open");
 const openRequest = indexedDB.open("pixel-sprite-studio", 1);
 openRequest.onupgradeneeded = () => {
   openRequest.result.createObjectStore("projects", { keyPath: "id" });
@@ -1293,23 +1383,10 @@ openRequest.onupgradeneeded = () => {
 };
 openRequest.onsuccess = async () => {
   db = openRequest.result;
-  const entries = await getAll("projects");
-  const saved = entries.find(
-    (entry) => entry.id === localStorage.getItem("pixel-studio-last"),
-  );
-  if (saved) {
-    project = saved.project;
-    project.id ||= saved.id;
-    render();
-    fitCanvas();
-  } else {
-    project.id = createProjectId();
-    await saveProject();
-    if (
-      window.matchMedia("(orientation:portrait) and (max-width:1100px)").matches
-    )
-      isHomePending = true;
-    else gallery();
-  }
+  if (
+    window.matchMedia("(orientation:portrait) and (max-width:1100px)").matches
+  )
+    isHomePending = true;
+  else gallery();
 };
 openRequest.onerror = () => toast("本機儲存無法使用，請匯出專案檔備份");

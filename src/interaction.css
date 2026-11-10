@@ -1,0 +1,171 @@
+.pixel-hover {
+  box-sizing: border-box;
+  position: absolute;
+  pointer-events: none;
+  z-index: 8;
+  border: 1px solid #17243f;
+  box-shadow:
+    inset 0 0 0 1px #fff,
+    0 0 0 1px #fff;
+  background: #6d8bd226;
+}
+.pixel-hover[hidden] {
+  display: none;
+}
+.pixel-hover[data-tool="eraser"] {
+  border-style: dashed;
+  background: #ffffff33;
+}
+.pixel-coordinates {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  z-index: 9;
+  font:
+    10px ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  color: #526481;
+  background: #ffffffdd;
+  padding: 6px 9px;
+  border: 1px solid #dce3ed;
+  border-radius: 5px;
+  pointer-events: none;
+}
+.compact-tool-picker {
+  position: absolute;
+  left: 15px;
+  bottom: 14px;
+  z-index: 15;
+  font-size: 11px;
+  color: #526481;
+}
+.compact-tool-picker summary {
+  min-height: 36px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  list-style: none;
+  cursor: pointer;
+  background: #fffefc;
+  border: 1px solid #d4ddeb;
+  box-shadow: 0 3px 12px #3d517111;
+  border-radius: 6px;
+  padding: 8px 11px;
+  user-select: none;
+}
+.compact-tool-picker summary::-webkit-details-marker {
+  display: none;
+}
+.compact-tool-picker[open] summary {
+  border-radius: 0 0 6px 6px;
+}
+.compact-tool-content {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: 266px;
+  max-height: min(430px, 65vh);
+  overflow: auto;
+  background: white;
+  border: 1px solid #d4ddeb;
+  border-radius: 8px 8px 8px 0;
+  padding: 12px;
+  box-shadow: 0 -5px 30px #30456b14;
+}
+.compact-tool-buttons {
+  display: flex;
+  gap: 5px;
+}
+.compact-tool-picker button {
+  min-height: 44px;
+  border: 1px solid #e1e6ef;
+  border-radius: 5px;
+  background: #f8f9fc;
+  padding: 6px;
+  color: #526481;
+}
+.compact-tool-buttons button {
+  flex: 1;
+  font-size: 21px;
+}
+.compact-tool-buttons small {
+  display: block;
+  font-size: 8px;
+  color: #8b96a9;
+}
+.compact-tool-buttons button.is-selected {
+  background: #e8efff;
+  border-color: #7c98d8;
+  color: #476fbd;
+}
+.compact-brush-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 9px 0;
+  font-size: 11px;
+}
+.compact-brush-row button {
+  width: 40px;
+  font-family: monospace;
+}
+.compact-shortcut-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.compact-shortcut-list button,
+.compact-shortcut-list > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  font-size: 10px;
+}
+.compact-shortcut-list > span {
+  grid-column: 1/-1;
+  padding: 4px 2px;
+}
+kbd {
+  font:
+    9px ui-monospace,
+    Consolas,
+    monospace;
+  background: #eef2f8;
+  padding: 3px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.canvas-tip {
+  pointer-events: none;
+}
+.canvas-tip > span {
+  margin-left: auto;
+}
+.compact-tool-picker ~ .canvas-tip {
+  display: none;
+}
+@media (max-height: 650px) {
+  .compact-tool-picker {
+    left: 10px;
+    bottom: 7px;
+  }
+  .compact-tool-picker summary {
+    padding: 6px 9px;
+    font-size: 9px;
+  }
+  .compact-tool-content {
+    max-height: 60vh;
+  }
+  .compact-tool-picker button {
+    min-height: 44px;
+  }
+  .pixel-coordinates {
+    top: 8px;
+    right: 10px;
+    font-size: 8px;
+    padding: 4px 6px;
+  }
+}

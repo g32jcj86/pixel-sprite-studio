@@ -1,0 +1,242 @@
+.export-dialog {
+  width: min(920px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 1px solid #dce4f7;
+  border-radius: 18px;
+  color: #31415e;
+  background: #fff;
+  box-shadow: 0 18px 80px #18243d33;
+}
+.export-dialog::backdrop {
+  background: #18243d77;
+  backdrop-filter: blur(3px);
+}
+.export-dialog-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 22px 25px;
+  border-bottom: 1px solid #e6ecf9;
+}
+.export-dialog-heading h2 {
+  margin: 0;
+  font-size: 21px;
+}
+.export-dialog-heading p {
+  margin: 6px 0 0;
+  color: #7886a2;
+  font-size: 12px;
+}
+.export-dialog-heading > button {
+  font-size: 25px;
+  width: 38px;
+  height: 38px;
+}
+.export-dialog-body {
+  display: grid;
+  grid-template-columns: 265px minmax(0, 1fr);
+  max-height: min(580px, calc(100dvh - 220px));
+  overflow: auto;
+}
+.export-config {
+  padding: 20px;
+  border-right: 1px solid #e6ecf9;
+}
+.export-format-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+.export-format-tabs button {
+  border: 1px solid #dce5f9;
+  background: #f7f9ff;
+  min-height: 42px;
+  padding: 7px;
+  font-size: 12px;
+}
+.export-format-tabs button.active {
+  color: #4269db;
+  background: #edf2ff;
+  border-color: #7999f5;
+  box-shadow: inset 0 0 0 1px #7999f5;
+}
+.export-config h3,
+.export-inspection h3 {
+  margin: 18px 0 10px;
+  font-size: 13px;
+}
+.export-select-all {
+  padding: 4px 0;
+  color: #5278df;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.export-action-choice {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 5px 7px;
+  border: 1px solid #e0e7f8;
+  padding: 10px;
+  border-radius: 9px;
+  margin-bottom: 7px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.export-action-choice input {
+  grid-row: span 2;
+  margin-top: 3px;
+  accent-color: #5279e9;
+}
+.export-action-choice small {
+  grid-column: 2;
+  color: #7a89a7;
+}
+.export-scope-summary {
+  background: #f3f6ff;
+  border-radius: 9px;
+  padding: 12px;
+  overflow-wrap: anywhere;
+}
+.export-file-list ul {
+  margin: 0;
+  padding-left: 17px;
+  font-size: 11px;
+  line-height: 1.9;
+  color: #7c89a1;
+  overflow-wrap: anywhere;
+}
+.export-inspection {
+  min-width: 0;
+  padding: 20px 24px;
+}
+.export-preview-heading {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.export-preview-heading h3 {
+  margin: 0 auto 0 0;
+}
+.export-preview-heading select {
+  max-width: 170px;
+  padding: 7px;
+  border: 1px solid #dce5f6;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 11px;
+}
+.export-preview-heading button {
+  font-size: 11px;
+  padding: 7px;
+  background: #eff3ff;
+}
+.export-artboard {
+  min-height: 200px;
+  height: 230px;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  border: 1px solid #dce4f5;
+  border-radius: 11px;
+  background: repeating-conic-gradient(#e4e8f1 0% 25%, #fff 0% 50%) 0/16px 16px;
+}
+.export-artboard.is-project {
+  display: none;
+}
+#export-preview-canvas {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 210px;
+  image-rendering: pixelated;
+  object-fit: contain;
+}
+#export-preview-canvas {
+  width: min(210px, 100%);
+}
+#export-preview-info {
+  font-size: 11px;
+  color: #7283a4;
+  margin: 9px 0 16px;
+}
+#export-metadata {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+#export-metadata > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  font-size: 12px;
+  border-bottom: 1px solid #edf1f8;
+  padding-bottom: 8px;
+  overflow-wrap: anywhere;
+}
+#export-metadata span {
+  color: #7b88a1;
+  flex-shrink: 0;
+}
+#export-metadata strong {
+  text-align: right;
+  font-weight: 500;
+  min-width: 0;
+}
+.export-preview-note {
+  font-size: 11px;
+  color: #7c89a3;
+  line-height: 1.8;
+  margin: 14px 0 0;
+}
+.export-dialog-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-top: 1px solid #e6ecf9;
+}
+.export-dialog-footer > span {
+  flex: 1;
+  font-size: 11px;
+  color: #6780b2;
+}
+.export-dialog-footer button {
+  min-height: 40px;
+  padding: 8px 17px;
+}
+@media (max-height: 650px) and (orientation: landscape) {
+  .export-dialog-heading {
+    padding: 10px 18px;
+  }
+  .export-dialog-heading h2 {
+    font-size: 17px;
+  }
+  .export-dialog-heading p {
+    margin-top: 3px;
+    font-size: 11px;
+  }
+  .export-dialog-body {
+    max-height: calc(100dvh - 170px);
+    grid-template-columns: 215px minmax(0, 1fr);
+  }
+  .export-config {
+    padding: 12px;
+  }
+  .export-inspection {
+    padding: 12px 15px;
+  }
+  .export-dialog-footer {
+    padding: 8px 14px;
+  }
+  .export-artboard {
+    min-height: 130px;
+    height: 150px;
+  }
+  #export-preview-canvas {
+    max-height: 130px;
+    width: min(130px, 100%);
+  }
+}

@@ -2191,3 +2191,199 @@ dialog::backdrop {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+.brand-icon svg {
+  width: 26px;
+  height: 26px;
+}
+.home-open #app > header,
+.home-open #app > main,
+.home-open #app > footer {
+  visibility: hidden;
+}
+.home-open {
+  background: #f8faff;
+}
+dialog.home-dialog {
+  inset: 0;
+  margin: 0;
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 40px max(24px, calc((100vw - 900px) / 2));
+  background: #f8faff;
+  overflow-y: auto;
+}
+.home-dialog::backdrop {
+  background: #f8faff;
+  backdrop-filter: none;
+}
+.home-dialog .modal-heading {
+  margin-bottom: 38px;
+}
+.home-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 24px;
+}
+.home-dialog .close-modal {
+  width: auto;
+  font-size: 13px;
+  color: #7893c0;
+  padding: 8px 12px;
+}
+.start-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.start-choices > button {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 20px;
+  height: 178px;
+  border: 1px solid #dae5f7;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 3px 16px #4776c405;
+}
+.start-choices > button:hover {
+  border-color: #94b0e8;
+  background: #f4f8ff;
+}
+.start-choice-icon {
+  color: #7396d8;
+  font-size: 36px;
+  line-height: 1;
+}
+.start-choices strong {
+  font-size: 20px;
+  font-weight: 600;
+}
+.start-choices small {
+  font-size: 12px;
+  color: #92a5c3;
+}
+.start-drop-zone {
+  border: 1px dashed #cad8ee;
+  border-radius: 8px;
+  padding: 19px;
+  margin-top: 18px;
+  text-align: center;
+  font-size: 13px;
+  color: #8aa2c6;
+  background: #f4f8ff;
+}
+.start-project-import {
+  display: block;
+  margin: 12px auto 28px;
+  padding: 8px 14px;
+  color: #7897c7;
+  font-size: 12px;
+}
+.recent-title {
+  font-size: 14px;
+  color: #7088ae;
+  font-weight: 600;
+  margin: 25px 0 14px;
+}
+.home-dialog .gallery-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.home-dialog .gallery-item {
+  background: #fff;
+}
+.file-drag-over::after {
+  content: "放開以上傳圖片";
+  position: fixed;
+  inset: 8px;
+  border: 3px dashed #7fa2e6;
+  border-radius: 12px;
+  background: #e9f1ffdd;
+  z-index: 9999;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  color: #537ec7;
+}
+.file-drag-over .start-drop-zone {
+  border-color: #6f99e5;
+  background: #eaf2ff;
+  color: #557ec6;
+}
+.preview-dock {
+  position: sticky;
+  top: -25px;
+  z-index: 2;
+  background: #fff;
+  padding-top: 3px;
+  padding-bottom: 12px;
+  margin-bottom: -12px;
+}
+.preview-box canvas.original-size {
+  max-width: none;
+  max-height: none;
+}
+@media (max-width: 1100px) {
+  .preview-dock {
+    top: -17px;
+  }
+}
+@media (max-height: 650px) and (orientation: landscape) {
+  dialog.home-dialog {
+    padding: 18px max(28px, calc((100vw - 800px) / 2));
+  }
+  .home-dialog .modal-heading {
+    margin-bottom: 16px;
+  }
+  .home-title {
+    font-size: 21px;
+  }
+  .start-choices {
+    gap: 12px;
+  }
+  .start-choices > button {
+    height: 122px;
+    padding: 15px;
+    gap: 8px;
+  }
+  .start-choice-icon {
+    font-size: 27px;
+  }
+  .start-choices strong {
+    font-size: 18px;
+  }
+  .start-choices small {
+    font-size: 11px;
+  }
+  .start-drop-zone {
+    padding: 12px;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+  .start-project-import {
+    margin: 6px auto 15px;
+    font-size: 11px;
+    min-height: 32px;
+  }
+  .preview-dock {
+    top: -12px;
+    padding-bottom: 9px;
+    margin-bottom: -9px;
+  }
+  .preview-dock .section-label {
+    margin-bottom: 7px;
+  }
+  .home-dialog .gallery-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
