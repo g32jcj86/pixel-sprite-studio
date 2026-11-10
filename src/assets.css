@@ -565,3 +565,61 @@
 .import-after-position > span[hidden] {
   display: none;
 }
+.anchor-choices {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.anchor-choice {
+  margin: 0;
+  padding: 10px;
+  border: 1px solid #bbb;
+  border-radius: 7px;
+}
+.anchor-choice legend {
+  padding: 0 5px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.anchor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(44px, 1fr));
+  gap: 5px;
+}
+.asset-dialog .anchor-grid button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 7px 10px;
+  font-size: 12px;
+}
+.asset-dialog .anchor-grid button.active {
+  background: #fff1e7;
+  border: 2px solid #ff6200;
+}
+.import-before-position,
+.import-after-position {
+  position: relative;
+}
+.anchor-point-marker {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #17191d;
+  outline: 1px solid white;
+  border-radius: 50%;
+  background: #ff6200;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 2;
+}
+.anchor-point-marker[hidden] {
+  display: none !important;
+}
+#frame-preview-before,
+#frame-preview {
+  cursor: crosshair;
+}
+#reposition-source-anchor-info {
+  font-variant-numeric: tabular-nums;
+}

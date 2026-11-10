@@ -348,7 +348,7 @@ function render() {
   const baseline = document.createElement("div");
   baseline.className = "ground-baseline";
   baseline.style.top = `${(project.pivot.y / project.height) * 100}%`;
-  baseline.title = "角色腳底基準線";
+  baseline.title = "共用定位點參考線";
   document.querySelector("#canvas-holder")!.append(baseline);
   const opacity = document.createElement("label");
   opacity.className = "reference-opacity";
