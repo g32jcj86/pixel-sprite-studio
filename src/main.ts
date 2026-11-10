@@ -212,7 +212,7 @@ function render() {
       .join(
         "",
       )}</div><div class="brush-row"><label for="brush">筆刷大小</label><select id="brush"><option value="1">1 px</option><option value="2">2 px</option><option value="3">3 px</option></select></div><div id="color-panel"></div><div class="left-bottom"><span>⌘ Z 復原</span><span>B 鉛筆 · E 橡皮擦</span><span>Space ＋ 拖曳平移</span><button id="help">⌨ 快捷鍵與操作說明</button></div></aside>
-    <section class="workspace"><div class="canvas-toolbar"><div class="canvas-title"><span class="status-dot"></span><strong>${escape(action().name)}</strong><span class="muted">/ 第 ${iFrame + 1} 格</span></div><div class="canvas-controls"><button id="undo" title="復原 Ctrl+Z">↶</button><button id="redo" title="重做 Ctrl+Shift+Z">↷</button><i></i><button id="grid" class="${isGrid ? "toggle-on" : ""}" title="切換格線">▦</button><button id="onion" class="${isOnion ? "toggle-on" : ""}" title="洋蔥皮：顯示前一格">◉</button><i></i><button id="zoom-out" title="縮小">−</button><button id="zoom-reset" class="zoom-value">${Math.round(iZoom * 100)}%</button><button id="zoom-in" title="放大">＋</button></div></div><div id="canvas-area"><div class="canvas-caption">${project.width} × ${project.height} px · 透明背景</div><div id="canvas-holder"><canvas id="reference-canvas"></canvas><canvas id="onion-canvas"></canvas><canvas id="drawing-canvas" aria-label="像素繪圖畫布"></canvas><div id="grid-overlay"></div><div id="pivot-marker" title="對齊基準點">＋</div></div><div class="canvas-tip">${icons[strTool]} ${({ pencil: "鉛筆工具", eraser: "橡皮擦工具", fill: "填色工具", picker: "滴管工具", move: "平移工具" } as Record<string, string>)[strTool]}<span>滾輪縮放 · 雙指縮放</span></div></div><div class="timeline"><div class="timeline-heading"><div><strong>時間軸</strong><span id="frame-count">${action().frames.length} 格</span></div><div class="timeline-actions"><button id="duplicate-frame" title="複製目前影格">▣ 複製</button><button id="delete-frame" title="刪除目前影格">⌫</button><button id="add-frame" class="soft-button">＋ 新增影格</button></div></div><div class="timeline-bottom"><button id="play" class="play-button" aria-label="播放動畫">${isPlaying ? "Ⅱ" : "▶"}</button><div id="frames"></div><div class="timeline-fps"><label for="fps">速度</label><div><input id="fps" type="number" min="1" max="30" value="${action().fps}"><span>FPS</span></div></div></div></div></section>
+    <section class="workspace"><div class="canvas-toolbar"><div class="canvas-title"><span class="status-dot"></span><strong>${escape(action().name)}</strong><span class="muted">/ 第 ${iFrame + 1} 格</span></div><div class="canvas-controls"><button id="undo" title="復原 Ctrl+Z">↶</button><button id="redo" title="重做 Ctrl+Shift+Z">↷</button><i></i><button id="grid" class="${isGrid ? "toggle-on" : ""}" aria-pressed="${isGrid}" aria-label="顯示像素格線" title="顯示像素格線">▦</button><button id="onion" class="${isOnion ? "toggle-on" : ""}" title="洋蔥皮：顯示前一格">◉</button><i></i><button id="zoom-out" title="縮小">−</button><button id="zoom-reset" class="zoom-value">${Math.round(iZoom * 100)}%</button><button id="zoom-in" title="放大">＋</button></div></div><div id="canvas-area"><div class="canvas-caption">${project.width} × ${project.height} px · 透明背景</div><div id="canvas-holder"><canvas id="reference-canvas"></canvas><canvas id="onion-canvas"></canvas><canvas id="drawing-canvas" aria-label="像素繪圖畫布"></canvas><div id="grid-overlay"></div><div id="pivot-marker" title="對齊基準點">＋</div></div><div class="canvas-tip">${icons[strTool]} ${({ pencil: "鉛筆工具", eraser: "橡皮擦工具", fill: "填色工具", picker: "滴管工具", move: "平移工具" } as Record<string, string>)[strTool]}<span>滾輪縮放 · 雙指縮放</span></div></div><div class="timeline"><div class="timeline-heading"><div><strong>時間軸</strong><span id="frame-count">${action().frames.length} 格</span></div><div class="timeline-actions"><button id="duplicate-frame" title="複製目前影格">▣ 複製</button><button id="delete-frame" title="刪除目前影格">⌫</button><button id="add-frame" class="soft-button">＋ 新增影格</button></div></div><div class="timeline-bottom"><button id="play" class="play-button" aria-label="播放動畫">${isPlaying ? "Ⅱ" : "▶"}</button><div id="frames"></div><div class="timeline-fps"><label for="fps">速度</label><div><input id="fps" type="number" min="1" max="30" value="${action().fps}"><span>FPS</span></div></div></div></div></section>
     <aside class="right-panel"><div class="section-label">動畫預覽 </div><div class="preview-box"><canvas id="preview-canvas"></canvas><span>${isPlaying ? "播放中" : "即時預覽"}</span></div><div class="preview-options"><label><input id="loop" type="checkbox" ${action().loop ? "checked" : ""}> 匯出循環</label><span>1× 原始比例</span></div><div class="divider"></div><div class="section-label">動作列表 <button id="add-action" title="新增動作">＋</button></div><div class="action-list">${project.actions.map((item, i) => `<button data-action="${i}" class="action-item ${i === iAction ? "selected" : ""}"><span class="action-symbol">${i === 0 ? "↔" : "◇"}</span><span><strong>${escape(item.name)}</strong><small>${item.frames.length} 格影格 · ${item.fps} FPS</small></span><span class="action-arrow">${i === iAction ? "●" : "›"}</span></button>`).join("")}</div><div class="action-management"><button id="rename-action">重新命名</button><button id="delete-action">刪除動作</button></div><div class="divider"></div><div class="section-label">畫布設定</div><div class="setting-row"><span>畫布尺寸</span><button id="resize">${project.width} × ${project.height} ↗</button></div><div class="setting-row"><span>對齊基準</span><button id="alignment">${project.pivot.x}, ${project.pivot.y} ⌖</button></div><div class="setting-row"><span>背景</span><span class="muted">透明</span></div><button id="templates" class="template-card"><span>＋</span><strong>新增空白作品</strong></button><button id="versions" class="version-link">◷ 版本紀錄與快照</button></aside></main><footer><span><i class="status-dot"></i> 自動儲存於此瀏覽器</span><span>${project.width} × ${project.height} px <b>·</b> ${project.actions.length} 個動作 <b>·</b> ${action().frames.length} 格影格</span></footer><div id="toast" role="status"></div><dialog id="modal"></dialog>`;
   mountColorPanel(
     document.querySelector<HTMLElement>("#color-panel")!,
@@ -347,6 +347,7 @@ function renderCanvases() {
   const holder = document.querySelector<HTMLDivElement>("#canvas-holder")!;
   holder.style.width = `${project.width * iZoom}px`;
   holder.style.height = `${project.height * iZoom}px`;
+  holder.style.backgroundSize = `${iZoom * 2}px ${iZoom * 2}px`;
   holder.style.transform = `translate(${iPanX}px, ${iPanY}px)`;
   paintCanvas(document.querySelector("#drawing-canvas")!, frame().pixels);
   paintCanvas(
@@ -888,7 +889,7 @@ function importMenu() {
   );
   dialog.querySelector("#image-import")!.addEventListener("click", () => {
     dialog.close();
-    openImportDialog(project, applyCurrentProject, iAction, iFrame);
+    openImageImport([], true);
   });
   const input = dialog.querySelector<HTMLInputElement>("#project-file")!;
   dialog.querySelector(".close-modal")!.addEventListener("click", () => {
@@ -949,6 +950,7 @@ function openImageImport(files: File[], isNew = !hasActiveProject) {
         next.actions = next.actions.filter((item) => item.frames.length > 0);
       if (isNew) {
         next.id = createProjectId();
+        next.pivot = { x: next.width / 2, y: next.height - 1 };
         next.name = files[0]?.name.replace(/\.[^.]+$/, "") || "未命名作品";
         applyProject(next);
       } else applyCurrentProject(next);
@@ -956,6 +958,8 @@ function openImageImport(files: File[], isNew = !hasActiveProject) {
     isNew ? 0 : iAction,
     isNew ? 0 : iFrame,
     files,
+    files.length === 0,
+    isNew,
   );
   const dialog = [
     ...document.querySelectorAll<HTMLDialogElement>(".asset-dialog"),

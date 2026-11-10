@@ -356,9 +356,9 @@ main {
   margin: auto;
   background-color: #fff;
   background-image: conic-gradient(
-    #eeeeed 25%,
+    #f2f2f0 25%,
     transparent 0 50%,
-    #eeeeed 0 75%,
+    #f2f2f0 0 75%,
     transparent 0
   );
   background-size: 20px 20px;
@@ -386,8 +386,8 @@ main {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(to right, #55555520 1px, transparent 1px),
-    linear-gradient(to bottom, #55555520 1px, transparent 1px);
+    linear-gradient(to right, #3434342b 1px, transparent 1px),
+    linear-gradient(to bottom, #3434342b 1px, transparent 1px);
 }
 #pivot-marker {
   position: absolute;
@@ -408,11 +408,16 @@ main {
 .dark-transparency {
   background-color: #555 !important;
   background-image: conic-gradient(
-    #454545 25%,
+    #505050 25%,
     transparent 0 50%,
-    #454545 0 75%,
+    #505050 0 75%,
     transparent 0
   ) !important;
+}
+.dark-transparency #grid-overlay {
+  background-image:
+    linear-gradient(to right, #ffffff2b 1px, transparent 1px),
+    linear-gradient(to bottom, #ffffff2b 1px, transparent 1px);
 }
 .canvas-tip {
   position: absolute;

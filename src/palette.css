@@ -533,3 +533,19 @@
 .color-library .color-library-footer {
   background: #fafafa;
 }
+@media (pointer: coarse) {
+  .color-current input[type="color"],
+  #color-hex,
+  #favorite-current {
+    height: 44px;
+    min-height: 44px;
+  }
+  #favorite-current {
+    min-width: 30px;
+  }
+  .color-library-footer > .primary,
+  #library-favorite,
+  .color-search {
+    min-height: 44px;
+  }
+}
