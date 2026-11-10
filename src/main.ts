@@ -10,6 +10,7 @@ import {
 import { openExportDialog } from "./export-ui";
 import { bindEditorInteractions } from "./interaction";
 import { icon } from "./icons";
+import { mountBackdropControls, removeBackdropSettings } from "./backdrop";
 
 const root = document.querySelector<HTMLDivElement>("#app")!;
 function createBlankProject(size = 32): Project {
@@ -87,8 +88,7 @@ let pinch: {
 } | null = null;
 let iPanX = 0,
   iPanY = 0,
-  isOriginalPreview = false,
-  isDarkTransparency = false;
+  isOriginalPreview = false;
 let referenceOpacity = 0.35;
 let isHomePending = false;
 function createProjectId() {
@@ -271,18 +271,17 @@ function render() {
     render();
   };
   document.querySelector(".preview-options>span")!.replaceWith(previewToggle);
-  const background = document.createElement("button");
-  background.innerHTML = `${icon("checker", 15)}<span>${isDarkTransparency ? "深色棋盤" : "淺色棋盤"}</span>`;
-  background.onclick = () => {
-    isDarkTransparency = !isDarkTransparency;
-    render();
-  };
-  document
-    .querySelector(".setting-row:last-of-type .muted")
-    ?.replaceWith(background);
-  document
-    .querySelector("#canvas-holder")!
-    .classList.toggle("dark-transparency", isDarkTransparency);
+  const drawingHost = document.createElement("div");
+  drawingHost.className = "drawing-backdrop-controls";
+  document.querySelector(".setting-row:last-of-type")?.remove();
+  document.querySelector("#canvas-area")!.append(drawingHost);
+  ["pointerdown", "pointermove", "wheel"].forEach((type) =>
+    drawingHost.addEventListener(type, (event) => event.stopPropagation()),
+  );
+  const previewHost = document.createElement("div");
+  previewHost.className = "preview-backdrop-controls";
+  previewDock.append(previewHost);
+  mountBackdropControls({ projectId: project.id, drawingHost, previewHost });
   const baseline = document.createElement("div");
   baseline.className = "ground-baseline";
   baseline.style.top = `${(project.pivot.y / project.height) * 100}%`;
@@ -345,8 +344,10 @@ function renderCanvases() {
   const holder = document.querySelector<HTMLDivElement>("#canvas-holder")!;
   holder.style.width = `${project.width * iZoom}px`;
   holder.style.height = `${project.height * iZoom}px`;
-  holder.style.backgroundSize = `${iZoom * 2}px ${iZoom * 2}px`;
+  if (holder.dataset.backdropMode !== "solid")
+    holder.style.backgroundSize = `${iZoom * 2}px ${iZoom * 2}px`;
   holder.style.transform = `translate(${iPanX}px, ${iPanY}px)`;
+  holder.style.setProperty("--pixel-cell-size", `${iZoom}px`);
   paintCanvas(document.querySelector("#drawing-canvas")!, frame().pixels);
   paintCanvas(
     document.querySelector("#reference-canvas")!,
@@ -368,6 +369,7 @@ function renderCanvases() {
   paintCanvas(onion, onionPixels);
   const grid = document.querySelector<HTMLDivElement>("#grid-overlay")!;
   grid.style.backgroundSize = `${iZoom}px ${iZoom}px`;
+  grid.style.setProperty("--pixel-grid-edge", iZoom >= 12 ? "2px" : "1px");
   grid.style.display = isGrid && iZoom >= 7 ? "block" : "none";
   const pivot = document.querySelector<HTMLDivElement>("#pivot-marker")!;
   pivot.style.left = `${(project.pivot.x / project.width) * 100}%`;
@@ -388,6 +390,7 @@ function renderCanvases() {
   preview.style.height = `${project.height * previewScale}px`;
   document.querySelector(".zoom-value")!.textContent =
     `${Math.round(iZoom * 100)}%`;
+  holder.dispatchEvent(new Event("pixel-art-rendered"));
 }
 function renderTimeline() {
   const frames = document.querySelector("#frames")!;
@@ -755,6 +758,50 @@ function bind() {
   };
   area.addEventListener("pointerup", end);
   area.addEventListener("pointercancel", end);
+  const pixelInfo = document.createElement("output");
+  pixelInfo.id = "pixel-info";
+  pixelInfo.hidden = true;
+  pixelInfo.setAttribute("aria-label", "繪圖像素色彩與不透明度");
+  area.append(pixelInfo);
+  const inspectPixel = (event: PointerEvent) => {
+    if (event.pointerType === "touch" || strTool === "move" || isSpace) {
+      pixelInfo.hidden = true;
+      return;
+    }
+    const position = point(event);
+    if (
+      position.x < 0 ||
+      position.y < 0 ||
+      position.x >= project.width ||
+      position.y >= project.height
+    ) {
+      pixelInfo.hidden = true;
+      return;
+    }
+    const canvas =
+      document.querySelector<HTMLCanvasElement>("#drawing-canvas")!;
+    const pixel = canvas
+      .getContext("2d")!
+      .getImageData(position.x, position.y, 1, 1).data;
+    const hex =
+      "#" +
+      [...pixel]
+        .map((channel) => channel.toString(16).padStart(2, "0"))
+        .join("")
+        .toUpperCase();
+    pixelInfo.dataset.alpha = String(pixel[3]);
+    pixelInfo.dataset.rgba = hex;
+    pixelInfo.textContent =
+      pixel[3] === 0
+        ? "空白（完全透明）"
+        : `${hex} · 不透明度 ${Math.round((pixel[3] / 255) * 1000) / 10}%`;
+    pixelInfo.hidden = false;
+  };
+  area.addEventListener("pointermove", inspectPixel);
+  area.addEventListener("pointerdown", inspectPixel);
+  area.addEventListener("pointerleave", () => {
+    pixelInfo.hidden = true;
+  });
 }
 function play() {
   clearTimeout(iPlayback);
@@ -1358,6 +1405,9 @@ function confirmProjectDelete(entry: { id: string; project: Project }) {
         history = [];
         future = [];
       }
+      void removeBackdropSettings(entry.id).catch(() =>
+        toast("作品已刪除，預覽背景暫存未能清除"),
+      );
       if (localStorage.getItem("pixel-studio-last") === entry.id)
         localStorage.removeItem("pixel-studio-last");
       dialog.close();

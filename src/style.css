@@ -386,8 +386,79 @@ main {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(to right, #3434342b 1px, transparent 1px),
-    linear-gradient(to bottom, #3434342b 1px, transparent 1px);
+    linear-gradient(
+      to right,
+      var(--pixel-grid-color, #34343445) 1px,
+      var(--pixel-grid-halo, #ffffffb3) 1px,
+      var(--pixel-grid-halo, #ffffffb3) var(--pixel-grid-edge, 2px),
+      transparent var(--pixel-grid-edge, 2px)
+    ),
+    linear-gradient(
+      to bottom,
+      var(--pixel-grid-color, #34343445) 1px,
+      var(--pixel-grid-halo, #ffffffb3) 1px,
+      var(--pixel-grid-halo, #ffffffb3) var(--pixel-grid-edge, 2px),
+      transparent var(--pixel-grid-edge, 2px)
+    );
+}
+#pixel-info {
+  position: absolute;
+  top: 43px;
+  right: 16px;
+  z-index: 9;
+  max-width: calc(100% - 26px);
+  font:
+    11px ui-monospace,
+    monospace;
+  color: #242424;
+  background: #fffffff2;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  padding: 6px 9px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+#pixel-info[hidden] {
+  display: none;
+}
+#canvas-area:has(.compact-tool-picker:hover, .drawing-backdrop-controls:hover)
+  #pixel-info,
+#canvas-area:has(.compact-tool-picker:hover, .drawing-backdrop-controls:hover)
+  .pixel-coordinates,
+#canvas-area:has(.compact-tool-picker:hover, .drawing-backdrop-controls:hover)
+  .pixel-hover {
+  display: none;
+}
+.drawing-backdrop-controls {
+  position: absolute;
+  right: 15px;
+  bottom: 13px;
+  z-index: 16;
+  width: auto !important;
+  max-width: 145px;
+}
+.drawing-backdrop-controls > button {
+  min-height: 36px;
+  box-shadow: 0 2px 10px #0000000b;
+}
+.preview-backdrop-controls {
+  margin-top: 8px;
+}
+@media (max-height: 650px) {
+  #pixel-info {
+    top: 39px;
+    right: 10px;
+    padding: 5px 7px;
+    font-size: 10px;
+  }
+  .drawing-backdrop-controls {
+    right: 10px;
+    bottom: 10px;
+    max-width: 122px;
+  }
+  .preview-backdrop-controls {
+    margin-top: 5px;
+  }
 }
 #pivot-marker {
   position: absolute;

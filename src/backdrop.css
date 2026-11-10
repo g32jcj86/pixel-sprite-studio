@@ -1,0 +1,279 @@
+.backdrop-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+}
+.backdrop-controls > button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  background: #fff;
+  color: #17191d;
+  font-size: 11px;
+}
+.backdrop-controls > button > span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.backdrop-controls > button svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.occupancy-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  font-size: 11px;
+  color: #333;
+}
+.occupancy-toggle input,
+.backdrop-dialog input {
+  accent-color: #ff6200;
+}
+#canvas-holder .occupancy-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  background: none;
+}
+#canvas-holder .occupancy-overlay[hidden] {
+  display: none;
+}
+.backdrop-dialog {
+  --accent: #ff6200;
+  --accent-dark: #e95700;
+  box-sizing: border-box;
+  width: min(600px, 94vw);
+  max-height: 92dvh;
+  overflow: auto;
+  padding: 20px;
+  border: 2px solid #ff6200;
+  border-radius: 12px;
+  background: white;
+  color: #17191d;
+  box-shadow: 0 20px 70px #17191d24;
+}
+.backdrop-dialog::backdrop {
+  background: #17191d66;
+}
+.backdrop-dialog header,
+.backdrop-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: auto;
+  padding: 8px 0;
+  background: #fff;
+  border: 0;
+  position: sticky;
+  z-index: 2;
+}
+.backdrop-dialog header {
+  top: -20px;
+  border-bottom: 1px solid #ddd;
+}
+.backdrop-dialog footer {
+  bottom: -20px;
+  justify-content: flex-end;
+  border-top: 1px solid #ddd;
+}
+.backdrop-dialog h2 {
+  font-size: 21px;
+  margin: 0;
+  color: #17191d;
+}
+.backdrop-dialog h3 {
+  font-size: 14px;
+  margin: 18px 0 10px;
+  color: #17191d;
+}
+.backdrop-dialog p {
+  font-size: 12px;
+  color: #626262;
+  line-height: 1.7;
+}
+.backdrop-dialog [hidden] {
+  display: none !important;
+}
+.backdrop-dialog button,
+.backdrop-image-upload {
+  min-height: 44px;
+  border: 1px solid #999;
+  padding: 8px 13px;
+  background: #fff;
+  color: #17191d;
+  border-radius: 6px;
+  font: inherit;
+  cursor: pointer;
+}
+.backdrop-dialog button:hover,
+.backdrop-image-upload:hover {
+  border-color: #ff6200;
+  background-color: #fff1e7;
+}
+.backdrop-dialog button.active {
+  border: 2px solid #ff6200;
+  background-color: #fff1e7;
+}
+.backdrop-dialog button.primary {
+  background: #ff6200;
+  border-color: #ff6200;
+  color: #fff;
+}
+.backdrop-dialog button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.backdrop-dialog svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.backdrop-dialog header button {
+  min-width: 44px;
+}
+.backdrop-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+.checker-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.checker-choices button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.checker-choices span {
+  display: block;
+  width: 40px;
+  height: 30px;
+  flex-shrink: 0;
+  border: 1px solid #999;
+  background-size: 12px 12px;
+}
+.checker-light {
+  background: conic-gradient(#ddd 25%, white 0 50%, #ddd 0 75%, white 0);
+}
+.checker-dark {
+  background: conic-gradient(#555 25%, #222 0 50%, #555 0 75%, #222 0);
+}
+.backdrop-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.backdrop-dialog .backdrop-color-swatch {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid #777;
+}
+.backdrop-dialog .backdrop-color-swatch.active {
+  box-shadow: inset 0 0 0 3px white;
+  border: 3px solid #ff6200;
+}
+.backdrop-color-input,
+.backdrop-occupancy-setting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  margin: 12px 0;
+  font-size: 13px;
+}
+.backdrop-color-input input {
+  width: 48px;
+  height: 44px;
+  background: white;
+  border: 1px solid #999;
+  padding: 3px;
+  border-radius: 5px;
+}
+.backdrop-color-input output {
+  font-family: ui-monospace, monospace;
+}
+.backdrop-image-upload {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.backdrop-image-upload input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+.backdrop-image-options {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 12px 0;
+}
+.backdrop-image-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.backdrop-image-options select {
+  min-height: 44px;
+  background: #fff;
+  color: #17191d;
+  border: 1px solid #999;
+  border-radius: 5px;
+  padding: 7px;
+  font: inherit;
+}
+.backdrop-image-thumbnail {
+  height: 100px;
+  border: 1px solid #aaa;
+  border-radius: 5px;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-color: #eee;
+}
+@media (max-height: 650px) {
+  .backdrop-dialog {
+    padding: 10px 16px;
+  }
+  .backdrop-dialog header {
+    top: -10px;
+  }
+  .backdrop-dialog footer {
+    bottom: -10px;
+  }
+  .backdrop-dialog h2 {
+    font-size: 18px;
+  }
+  .backdrop-controls > button {
+    padding: 5px 7px;
+    font-size: 10px;
+  }
+  .occupancy-toggle {
+    font-size: 10px;
+  }
+}
