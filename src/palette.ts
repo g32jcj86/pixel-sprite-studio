@@ -244,6 +244,16 @@ function renderLibraryColors() {
   if (!dialog) return;
   const host = dialog.querySelector("#library-colors")!;
   host.replaceChildren();
+  if (activeTab === "project") {
+    const edit = document.createElement("button");
+    edit.className = "custom-search-color";
+    edit.textContent = "編輯專案色盤";
+    edit.onclick = () => {
+      (dialog as HTMLDialogElement).close();
+      editProjectPalette();
+    };
+    host.append(edit);
+  }
   let count = 0;
   dialog
     .querySelectorAll<HTMLButtonElement>("[data-color-tab]")
