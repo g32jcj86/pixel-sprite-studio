@@ -62,7 +62,7 @@
   border-radius: 0 0 6px 6px;
 }
 .compact-tool-content {
-  position: absolute;
+  position: fixed;
   bottom: 100%;
   left: 0;
   width: 266px;

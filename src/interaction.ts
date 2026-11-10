@@ -49,6 +49,13 @@ export function bindEditorInteractions() {
   let pointer: { x: number; y: number } | null = null;
   let isPan = false;
   function refresh() {
+        if (picker.open) {
+            const rect = picker.querySelector('summary')!.getBoundingClientRect();
+            const content = picker.querySelector<HTMLElement>('.compact-tool-content')!;
+            content.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 274)) + 'px';
+            content.style.bottom = (window.innerHeight - rect.top) + 'px';
+            content.style.maxHeight = Math.max(90, rect.top - 8) + 'px';
+        }
     const brush = document.querySelector<HTMLSelectElement>("#brush");
     const strTool =
       document.querySelector<HTMLElement>("[data-tool].active")?.dataset.tool ||
@@ -94,6 +101,8 @@ export function bindEditorInteractions() {
     outline.style.height = `${(iHeight / canvas!.height) * 100}%`;
     coordinates.textContent = `X ${iX} · Y ${iY}${iBrush > 1 ? ` · ${iWidth} × ${iHeight}` : ""}`;
   }
+  picker.addEventListener('toggle', refresh, { signal });
+  window.addEventListener('resize', refresh, { signal });
   function stepBrush(iStep: number) {
     const select = document.querySelector<HTMLSelectElement>("#brush");
     if (!select) return;
