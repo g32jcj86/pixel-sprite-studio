@@ -385,21 +385,87 @@ main {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  background-image: radial-gradient(
+    circle at 0.75px 0.75px,
+    var(--pixel-grid-color, #34343445) 0.8px,
+    transparent 1px
+  );
+}
+#canvas-holder[data-grid-style="lines"] #grid-overlay {
   background-image:
     linear-gradient(
       to right,
       var(--pixel-grid-color, #34343445) 1px,
-      var(--pixel-grid-halo, #ffffffb3) 1px,
-      var(--pixel-grid-halo, #ffffffb3) var(--pixel-grid-edge, 2px),
-      transparent var(--pixel-grid-edge, 2px)
+      transparent 1px
     ),
     linear-gradient(
       to bottom,
       var(--pixel-grid-color, #34343445) 1px,
-      var(--pixel-grid-halo, #ffffffb3) 1px,
-      var(--pixel-grid-halo, #ffffffb3) var(--pixel-grid-edge, 2px),
-      transparent var(--pixel-grid-edge, 2px)
+      transparent 1px
     );
+}
+#canvas-holder .pixel-hover {
+  border: 2px solid #ff6200;
+  background: transparent;
+  box-shadow:
+    inset 0 0 0 1px white,
+    0 0 0 1px #171717;
+}
+#canvas-holder .pixel-hover[data-tool="eraser"] {
+  background: transparent;
+  border-style: dashed;
+}
+#pixel-inspection-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: none;
+  min-height: 36px;
+  padding: 6px 9px;
+  border: 1px solid #777;
+  background: white;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+#pixel-inspection-toggle.active {
+  background: #fff1e7;
+  border-color: #ff6200;
+  color: #b94500;
+}
+.pixel-inspection-legend {
+  position: absolute;
+  top: 5px;
+  left: 180px;
+  pointer-events: none;
+  color: #777;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.pixel-inspection-legend[hidden] {
+  display: none;
+}
+@media (max-height: 650px) and (orientation: landscape) {
+  #pixel-inspection-toggle {
+    position: absolute;
+    top: 7px;
+    left: 12px;
+    z-index: 16;
+    min-height: 44px;
+    padding: 7px 10px;
+    box-shadow: 0 2px 9px #0000000c;
+  }
+  .canvas-caption,
+  .pixel-inspection-legend {
+    display: none;
+  }
+}
+@media (pointer: coarse) {
+  #pixel-inspection-toggle {
+    min-height: 44px;
+  }
 }
 #pixel-info {
   position: absolute;
@@ -408,7 +474,7 @@ main {
   z-index: 9;
   max-width: calc(100% - 26px);
   font:
-    11px ui-monospace,
+    12px ui-monospace,
     monospace;
   color: #242424;
   background: #fffffff2;
@@ -421,11 +487,27 @@ main {
 #pixel-info[hidden] {
   display: none;
 }
-#canvas-area:has(.compact-tool-picker:hover, .drawing-backdrop-controls:hover)
+#pixel-info[data-occupied="true"] {
+  border-color: #e6935e;
+  background: #fff8f0;
+}
+#canvas-area:has(
+    .compact-tool-picker:hover,
+    .drawing-backdrop-controls:hover,
+    .pixel-inspection-control:hover
+  )
   #pixel-info,
-#canvas-area:has(.compact-tool-picker:hover, .drawing-backdrop-controls:hover)
+#canvas-area:has(
+    .compact-tool-picker:hover,
+    .drawing-backdrop-controls:hover,
+    .pixel-inspection-control:hover
+  )
   .pixel-coordinates,
-#canvas-area:has(.compact-tool-picker:hover, .drawing-backdrop-controls:hover)
+#canvas-area:has(
+    .compact-tool-picker:hover,
+    .drawing-backdrop-controls:hover,
+    .pixel-inspection-control:hover
+  )
   .pixel-hover {
   display: none;
 }
@@ -446,7 +528,7 @@ main {
 }
 @media (max-height: 650px) {
   #pixel-info {
-    top: 39px;
+    top: 58px;
     right: 10px;
     padding: 5px 7px;
     font-size: 10px;

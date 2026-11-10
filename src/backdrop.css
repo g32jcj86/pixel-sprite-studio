@@ -277,3 +277,33 @@
     font-size: 10px;
   }
 }
+#canvas-holder .transparency-aid {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+  background: none;
+  image-rendering: auto;
+}
+#canvas-holder .transparency-aid[hidden] {
+  display: none;
+}
+#canvas-holder .occupancy-overlay {
+  image-rendering: auto;
+}
+.backdrop-grid-style {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  margin-top: 12px;
+  font-size: 13px;
+}
+.backdrop-grid-style select {
+  min-height: 44px;
+  padding: 8px;
+  background: white;
+  color: #17191d;
+  border: 1px solid #999;
+  border-radius: 5px;
+  font: inherit;
+}

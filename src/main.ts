@@ -10,7 +10,12 @@ import {
 import { openExportDialog } from "./export-ui";
 import { bindEditorInteractions } from "./interaction";
 import { icon } from "./icons";
-import { mountBackdropControls, removeBackdropSettings } from "./backdrop";
+import {
+  mountBackdropControls,
+  removeBackdropSettings,
+  getPixelInspectionState,
+  togglePixelInspection,
+} from "./backdrop";
 
 const root = document.querySelector<HTMLDivElement>("#app")!;
 function createBlankProject(size = 32): Project {
@@ -281,7 +286,35 @@ function render() {
   const previewHost = document.createElement("div");
   previewHost.className = "preview-backdrop-controls";
   previewDock.append(previewHost);
+  const inspection = document.createElement("button");
+  inspection.id = "pixel-inspection-toggle";
+  inspection.className = "pixel-inspection-control";
+  inspection.type = "button";
+  inspection.innerHTML = `${icon("target", 17)}<span>像素辨識</span>`;
+  inspection.setAttribute("aria-label", "像素辨識");
+  inspection.onclick = () => togglePixelInspection();
+  ["pointerdown", "pointermove", "wheel"].forEach((type) =>
+    inspection.addEventListener(type, (event) => event.stopPropagation()),
+  );
+  document.querySelector(".canvas-controls")!.before(inspection);
+  const inspectionLegend = document.createElement("span");
+  inspectionLegend.className = "pixel-inspection-legend";
+  inspectionLegend.textContent = "橘點＝已上色；斜紋＝透明";
+  document.querySelector("#canvas-area")!.append(inspectionLegend);
+  const updateInspection = () => {
+    const state = getPixelInspectionState();
+    inspection.classList.toggle("active", state.active);
+    inspection.setAttribute("aria-pressed", String(state.active));
+    inspection.dataset.preference = state.preference;
+    inspection.title = `${state.active ? "關閉" : "開啟"}像素辨識：橘點代表已上色，斜紋代表透明；不影響下載`;
+    inspectionLegend.hidden = !state.active;
+  };
+  document
+    .querySelector("#canvas-holder")!
+    .addEventListener("pixel-inspection-changed", updateInspection);
   mountBackdropControls({ projectId: project.id, drawingHost, previewHost });
+  updateInspection();
+  positionInspectionControl();
   const baseline = document.createElement("div");
   baseline.className = "ground-baseline";
   baseline.style.top = `${(project.pivot.y / project.height) * 100}%`;
@@ -369,7 +402,6 @@ function renderCanvases() {
   paintCanvas(onion, onionPixels);
   const grid = document.querySelector<HTMLDivElement>("#grid-overlay")!;
   grid.style.backgroundSize = `${iZoom}px ${iZoom}px`;
-  grid.style.setProperty("--pixel-grid-edge", iZoom >= 12 ? "2px" : "1px");
   grid.style.display = isGrid && iZoom >= 7 ? "block" : "none";
   const pivot = document.querySelector<HTMLDivElement>("#pivot-marker")!;
   pivot.style.left = `${(project.pivot.x / project.width) * 100}%`;
@@ -791,10 +823,11 @@ function bind() {
         .toUpperCase();
     pixelInfo.dataset.alpha = String(pixel[3]);
     pixelInfo.dataset.rgba = hex;
+    pixelInfo.dataset.occupied = String(pixel[3] > 0);
     pixelInfo.textContent =
       pixel[3] === 0
         ? "空白（完全透明）"
-        : `${hex} · 不透明度 ${Math.round((pixel[3] / 255) * 1000) / 10}%`;
+        : `已上色 · ${hex} · 不透明度 ${Math.round((pixel[3] / 255) * 1000) / 10}%`;
     pixelInfo.hidden = false;
   };
   area.addEventListener("pointermove", inspectPixel);
@@ -1532,6 +1565,14 @@ function positionTimeline() {
     document
       .querySelector("#app")!
       .insertBefore(timeline, document.querySelector("#app>footer"));
+  positionInspectionControl();
+}
+function positionInspectionControl() {
+  const control = document.querySelector("#pixel-inspection-toggle");
+  if (!control) return;
+  if (window.innerHeight <= 650)
+    document.querySelector("#canvas-area")!.append(control);
+  else document.querySelector(".canvas-controls")!.before(control);
 }
 function fitCanvas() {
   positionTimeline();

@@ -8,6 +8,8 @@ type BackdropState = {
   previewFit: "contain" | "cover";
   imageUrl: string;
   occupancy: boolean;
+  inspectionPreference: "auto" | "on" | "off";
+  gridStyle: "dots" | "lines";
 };
 type MountOptions = {
   projectId?: string;
@@ -48,6 +50,14 @@ function preferences(id: string) {
     previewColor: isColor(saved.previewColor) ? saved.previewColor : "#ffffff",
     previewFit: saved.previewFit === "cover" ? "cover" : "contain",
     occupancy: saved.occupancy === true,
+    inspectionPreference: ["auto", "on", "off"].includes(
+      saved.inspectionPreference || "",
+    )
+      ? saved.inspectionPreference!
+      : saved.occupancy === true
+        ? "on"
+        : "auto",
+    gridStyle: saved.gridStyle === "lines" ? "lines" : "dots",
     imageUrl: "",
   };
   states.set(id, state);
@@ -57,34 +67,153 @@ function savePreferences(id: string) {
   const { imageUrl: _, ...saved } = preferences(id);
   localStorage.setItem("pixel-backdrop:" + id, JSON.stringify(saved));
 }
+function inspectionState(state: BackdropState) {
+  const holder = document.querySelector<HTMLElement>("#canvas-holder");
+  const zoom = Number.parseFloat(
+    holder?.style.getPropertyValue("--pixel-cell-size") || "0",
+  );
+  return {
+    preference: state.inspectionPreference,
+    active:
+      state.inspectionPreference === "on" ||
+      (state.inspectionPreference === "auto" && zoom >= 12),
+  };
+}
+export function getPixelInspectionState() {
+  return inspectionState(preferences(activeId));
+}
+export function togglePixelInspection() {
+  const state = preferences(activeId);
+  state.inspectionPreference = inspectionState(state).active ? "off" : "on";
+  state.occupancy = state.inspectionPreference === "on";
+  savePreferences(activeId);
+  applyState();
+}
 function drawOccupancy(state: BackdropState) {
   const holder = document.querySelector<HTMLElement>("#canvas-holder");
   const drawing = document.querySelector<HTMLCanvasElement>("#drawing-canvas");
-  if (!holder || !drawing) return;
+  const area = document.querySelector<HTMLElement>("#canvas-area");
+  if (!holder || !drawing || !area) return;
+  const inspection = inspectionState(state);
   let overlay = holder.querySelector<HTMLCanvasElement>(".occupancy-overlay");
+  let transparency =
+    holder.querySelector<HTMLCanvasElement>(".transparency-aid");
   if (!overlay) {
     overlay = document.createElement("canvas");
     overlay.className = "occupancy-overlay";
     overlay.setAttribute("aria-hidden", "true");
     holder.append(overlay);
   }
-  overlay.hidden = !state.occupancy;
-  holder.classList.toggle("show-occupancy", state.occupancy);
-  if (!state.occupancy) return;
-  overlay.width = drawing.width;
-  overlay.height = drawing.height;
+  if (!transparency) {
+    transparency = document.createElement("canvas");
+    transparency.className = "transparency-aid";
+    transparency.setAttribute("aria-hidden", "true");
+    holder.prepend(transparency);
+  }
+  overlay.hidden = transparency.hidden = !inspection.active;
+  holder.classList.toggle("show-occupancy", inspection.active);
+  holder.dataset.inspectionPreference = state.inspectionPreference;
+  holder.dispatchEvent(
+    new CustomEvent("pixel-inspection-changed", { detail: inspection }),
+  );
+  if (!inspection.active) return;
+  const bounds = holder.getBoundingClientRect(),
+    viewport = area.getBoundingClientRect();
+  const offsetX = Math.max(0, Math.floor(viewport.left - bounds.left)),
+    offsetY = Math.max(0, Math.floor(viewport.top - bounds.top));
+  const width = Math.max(
+    0,
+    Math.ceil(
+      Math.min(bounds.right, viewport.right) -
+        Math.max(bounds.left, viewport.left),
+    ),
+  );
+  const height = Math.max(
+    0,
+    Math.ceil(
+      Math.min(bounds.bottom, viewport.bottom) -
+        Math.max(bounds.top, viewport.top),
+    ),
+  );
+  if (!width || !height) {
+    overlay.hidden = transparency.hidden = true;
+    return;
+  }
+  const ratio = Math.min(2, window.devicePixelRatio || 1);
+  [overlay, transparency].forEach((canvas) => {
+    canvas.width = Math.ceil(width * ratio);
+    canvas.height = Math.ceil(height * ratio);
+    canvas.style.left = offsetX + "px";
+    canvas.style.top = offsetY + "px";
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+  });
+  const marks = overlay.getContext("2d")!,
+    empty = transparency.getContext("2d")!;
+  marks.scale(ratio, ratio);
+  empty.scale(ratio, ratio);
+  marks.translate(-offsetX, -offsetY);
+  empty.translate(-offsetX, -offsetY);
+  const tile = document.createElement("canvas");
+  tile.width = tile.height = 8;
+  const hatch = tile.getContext("2d")!;
+  hatch.fillStyle =
+    state.mode === "dark"
+      ? "#454545"
+      : state.mode === "solid" && state.color.toLowerCase() !== "#ffffff"
+        ? state.color
+        : "#d6d6d6";
+  hatch.fillRect(0, 0, 8, 8);
+  hatch.strokeStyle =
+    state.mode === "dark"
+      ? "#6b6b6b"
+      : state.mode === "solid" && state.color.toLowerCase() !== "#ffffff"
+        ? "#ffffff77"
+        : "#b4b4b4";
+  hatch.lineWidth = 1;
+  hatch.beginPath();
+  hatch.moveTo(-4, 8);
+  hatch.lineTo(8, -4);
+  hatch.moveTo(4, 12);
+  hatch.lineTo(12, 4);
+  hatch.stroke();
+  empty.fillStyle = empty.createPattern(tile, "repeat")!;
   const source = drawing
     .getContext("2d")!
     .getImageData(0, 0, drawing.width, drawing.height).data;
-  const context = overlay.getContext("2d")!;
-  const pixels = context.createImageData(drawing.width, drawing.height);
-  for (let i = 0; i < source.length; i += 4)
-    if (source[i + 3]) {
-      pixels.data[i] = 255;
-      pixels.data[i + 1] = 98;
-      pixels.data[i + 3] = 105;
+  const cellX = bounds.width / drawing.width,
+    cellY = bounds.height / drawing.height;
+  const firstX = Math.max(0, Math.floor(offsetX / cellX)),
+    firstY = Math.max(0, Math.floor(offsetY / cellY));
+  const lastX = Math.min(drawing.width, Math.ceil((offsetX + width) / cellX)),
+    lastY = Math.min(drawing.height, Math.ceil((offsetY + height) / cellY));
+  const size = Math.max(3, Math.min(6, Math.floor(Math.min(cellX, cellY) / 5))),
+    inset = Math.max(2, Math.min(4, Math.floor(cellX / 7)));
+  for (let y = firstY; y < lastY; y++)
+    for (let x = firstX; x < lastX; x++) {
+      const left = x * cellX,
+        top = y * cellY;
+      if (source[(y * drawing.width + x) * 4 + 3] === 0)
+        empty.fillRect(left, top, cellX, cellY);
+      else if (Math.min(cellX, cellY) >= 8) {
+        marks.fillStyle = "#ffffff";
+        marks.fillRect(left + inset, top + inset, size, size);
+        marks.fillStyle = "#17191d";
+        marks.fillRect(
+          left + inset + 1,
+          top + inset + 1,
+          Math.max(1, size - 2),
+          Math.max(1, size - 2),
+        );
+        marks.fillStyle = "#ff6200";
+        marks.fillRect(
+          left + inset + 2,
+          top + inset + 2,
+          Math.max(1, size - 4),
+          Math.max(1, size - 4),
+        );
+      }
     }
-  context.putImageData(pixels, 0, 0);
 }
 function applyState() {
   const state = preferences(activeId);
@@ -92,6 +221,7 @@ function applyState() {
   const preview = document.querySelector<HTMLElement>(".preview-box");
   if (holder) {
     holder.dataset.backdropMode = state.mode;
+    holder.dataset.gridStyle = state.gridStyle;
     const strBase =
       state.mode === "dark"
         ? "#343434"
@@ -147,7 +277,7 @@ function applyState() {
       activeOptions.drawingHost.querySelector<HTMLInputElement>(
         "[data-occupancy]",
       );
-    if (occupancy) occupancy.checked = state.occupancy;
+    if (occupancy) occupancy.checked = inspectionState(state).active;
   }
 }
 export function mountBackdropControls(options: MountOptions) {
@@ -177,11 +307,15 @@ export function mountBackdropControls(options: MountOptions) {
     .querySelector("[data-occupancy]")
     ?.addEventListener("change", (event) => {
       state.occupancy = (event.target as HTMLInputElement).checked;
+      state.inspectionPreference = state.occupancy ? "on" : "off";
       savePreferences(id);
       applyState();
     });
   const holder = document.querySelector("#canvas-holder");
   holder?.addEventListener("pixel-art-rendered", () => {
+    if (activeId === id) drawOccupancy(preferences(id));
+  });
+  document.querySelector("#canvas-area")?.addEventListener("scroll", () => {
     if (activeId === id) drawOccupancy(preferences(id));
   });
   applyState();
@@ -218,7 +352,7 @@ export function openBackdropDialog(tab: "drawing" | "preview" = "drawing") {
   dialog.addEventListener("drop", (event) => event.stopPropagation());
   dialog.id = "backdrop-dialog";
   dialog.className = "backdrop-dialog";
-  dialog.innerHTML = `<header><h2>背景與透明度</h2><button type="button" data-close aria-label="關閉背景設定">${icon("close")}</button></header><div class="backdrop-tabs"><button data-tab="drawing">繪圖畫布</button><button data-tab="preview">動畫預覽</button></div><section data-panel="drawing"><h3>畫布背景</h3><div class="checker-choices"><button data-mode="light"><span class="checker-light"></span>淺色棋盤</button><button data-mode="dark"><span class="checker-dark"></span>深色棋盤</button></div><h3>純色背景</h3><div class="backdrop-swatches" data-swatches="drawing"></div><label class="backdrop-color-input">自訂顏色<input id="drawing-backdrop-color" type="color" value="${state.color}"><output id="drawing-backdrop-hex">${state.color.toUpperCase()}</output></label><label class="backdrop-occupancy-setting"><input id="backdrop-occupancy" type="checkbox" ${state.occupancy ? "checked" : ""}>標示非透明像素</label><p>背景與標示只供檢視，不會加入輸出圖片。</p></section><section data-panel="preview"><h3>預覽背景色</h3><div class="backdrop-swatches" data-swatches="preview"></div><label class="backdrop-color-input">自訂顏色<input id="preview-backdrop-color" type="color" value="${state.previewColor}"><output id="preview-backdrop-hex">${state.previewColor.toUpperCase()}</output></label><h3>背景圖片</h3><label class="backdrop-image-upload">${icon("upload")}上傳背景圖片<input id="preview-backdrop-file" type="file" accept="image/*"></label><div class="backdrop-image-options"><label>圖片顯示<select id="preview-backdrop-fit"><option value="contain">完整顯示</option><option value="cover">填滿預覽</option></select></label><button id="clear-preview-backdrop" type="button">${icon("trash")}移除背景圖片</button></div><div class="backdrop-image-thumbnail" id="backdrop-image-thumbnail"></div><p>背景圖片只供預覽，不會加入輸出素材。</p></section><p id="backdrop-status" role="status"></p><footer><button type="button" data-close class="primary">完成</button></footer>`;
+  dialog.innerHTML = `<header><h2>背景與透明度</h2><button type="button" data-close aria-label="關閉背景設定">${icon("close")}</button></header><div class="backdrop-tabs"><button data-tab="drawing">繪圖畫布</button><button data-tab="preview">動畫預覽</button></div><section data-panel="drawing"><h3>畫布背景</h3><div class="checker-choices"><button data-mode="light"><span class="checker-light"></span>淺色棋盤</button><button data-mode="dark"><span class="checker-dark"></span>深色棋盤</button></div><h3>純色背景</h3><div class="backdrop-swatches" data-swatches="drawing"></div><label class="backdrop-color-input">自訂顏色<input id="drawing-backdrop-color" type="color" value="${state.color}"><output id="drawing-backdrop-hex">${state.color.toUpperCase()}</output></label><label class="backdrop-occupancy-setting"><input id="backdrop-occupancy" type="checkbox" ${inspectionState(state).active ? "checked" : ""}>透明與佔位提示</label><button id="inspection-auto" type="button">高倍縮放自動提示</button><label class="backdrop-grid-style">格線顯示<select id="backdrop-grid-style"><option value="dots">頂點</option><option value="lines">完整格線</option></select></label><p>斜紋是透明格；橘點表示已有像素。只供檢視，不加入輸出圖片。</p></section><section data-panel="preview"><h3>預覽背景色</h3><div class="backdrop-swatches" data-swatches="preview"></div><label class="backdrop-color-input">自訂顏色<input id="preview-backdrop-color" type="color" value="${state.previewColor}"><output id="preview-backdrop-hex">${state.previewColor.toUpperCase()}</output></label><h3>背景圖片</h3><label class="backdrop-image-upload">${icon("upload")}上傳背景圖片<input id="preview-backdrop-file" type="file" accept="image/*"></label><div class="backdrop-image-options"><label>圖片顯示<select id="preview-backdrop-fit"><option value="contain">完整顯示</option><option value="cover">填滿預覽</option></select></label><button id="clear-preview-backdrop" type="button">${icon("trash")}移除背景圖片</button></div><div class="backdrop-image-thumbnail" id="backdrop-image-thumbnail"></div><p>背景圖片只供預覽，不會加入輸出素材。</p></section><p id="backdrop-status" role="status"></p><footer><button type="button" data-close class="primary">完成</button></footer>`;
   const presets = [
     { color: "#ffffff", label: "白色" },
     { color: "#b8b8b8", label: "中灰" },
@@ -249,6 +383,13 @@ export function openBackdropDialog(tab: "drawing" | "preview" = "drawing") {
     }),
   );
   function refreshDialog() {
+    (dialog.querySelector("#backdrop-occupancy") as HTMLInputElement).checked =
+      inspectionState(state).active;
+    (dialog.querySelector("#backdrop-grid-style") as HTMLSelectElement).value =
+      state.gridStyle;
+    dialog
+      .querySelector("#inspection-auto")!
+      .classList.toggle("active", state.inspectionPreference === "auto");
     dialog.querySelectorAll<HTMLElement>("[data-mode]").forEach((button) => {
       const isSelected = button.dataset.mode === state.mode;
       button.classList.toggle("active", isSelected);
@@ -333,6 +474,18 @@ export function openBackdropDialog(tab: "drawing" | "preview" = "drawing") {
     .querySelector("#backdrop-occupancy")!
     .addEventListener("change", (event) => {
       state.occupancy = (event.target as HTMLInputElement).checked;
+      commit();
+    });
+  dialog.querySelector("#inspection-auto")!.addEventListener("click", () => {
+    state.inspectionPreference = "auto";
+    state.occupancy = false;
+    commit();
+  });
+  dialog
+    .querySelector("#backdrop-grid-style")!
+    .addEventListener("change", (event) => {
+      state.gridStyle = (event.target as HTMLSelectElement).value as
+        "dots" | "lines";
       commit();
     });
   dialog
