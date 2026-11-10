@@ -2122,3 +2122,187 @@ dialog.home-dialog {
     min-height: 44px;
   }
 }
+
+.tools.toolset-extended .tool {
+  grid-column: auto;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 6px;
+  font-size: 13px;
+}
+.tools.toolset-extended .tool[data-tool="pencil"],
+.tools.toolset-extended .tool[data-tool="move"] {
+  grid-column: 1/-1;
+}
+.tools.toolset-extended .tool b {
+  width: 26px;
+}
+.tools.toolset-extended .tool svg {
+  width: 24px;
+  height: 24px;
+}
+.brush-settings {
+  margin-top: 13px;
+}
+.brush-settings [hidden] {
+  display: none;
+}
+.brush-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  font-size: 11px;
+}
+.brush-top label {
+  flex: 1;
+  white-space: nowrap;
+}
+.brush-top input[type="number"] {
+  width: 49px;
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid #999;
+  border-radius: 5px;
+  padding: 5px;
+  font-size: 12px;
+}
+.brush-top select {
+  width: 62px;
+  min-height: 36px;
+  border: 1px solid #999;
+  background: white;
+  border-radius: 5px;
+  font-size: 11px;
+  padding: 4px;
+}
+.brush-settings input[type="range"] {
+  width: 100%;
+  height: 24px;
+  margin: 3px 0 0;
+  accent-color: #ff6200;
+}
+.background-erase-settings p {
+  font-size: 10px;
+  line-height: 1.7;
+  color: #777;
+  margin: 5px 0;
+}
+.left-panel:has([data-tool="backgroundEraser"].active) #color-panel {
+  display: none;
+}
+.preview-view-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 7px;
+  margin-top: 8px;
+}
+.preview-view-actions .preview-backdrop-controls {
+  margin: 0;
+}
+.preview-transparency-check {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  background: white;
+  padding: 7px;
+  font-size: 11px;
+}
+.preview-transparency-check svg {
+  width: 15px;
+  height: 15px;
+}
+.background-removal-entry {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 12px;
+  padding: 9px;
+  border: 1px solid #999;
+  background: white;
+  font-size: 12px;
+}
+.preview-view-actions .backdrop-controls > button {
+  font-size: 11px;
+  padding: 7px;
+}
+.preview-view-actions .backdrop-controls > button > .ui-icon:last-child {
+  display: none;
+}
+@media (max-height: 650px) and (orientation: landscape) {
+  .tools.toolset-extended .tool[data-tool] {
+    grid-column: auto;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0;
+    font-size: 10px;
+    padding: 1px;
+    min-height: 44px;
+  }
+  .tools.toolset-extended .tool svg {
+    width: 22px;
+    height: 22px;
+  }
+  .brush-settings {
+    margin-top: 8px;
+  }
+  .brush-top {
+    font-size: 10px;
+    gap: 3px;
+  }
+  .brush-top input[type="number"] {
+    width: 42px;
+    min-height: 36px;
+    font-size: 11px;
+  }
+  .brush-top select {
+    width: 55px;
+    min-height: 36px;
+    font-size: 10px;
+  }
+  .brush-settings input[type="range"] {
+    height: 20px;
+  }
+  .preview-view-actions {
+    gap: 5px;
+    margin-top: 5px;
+  }
+  .preview-view-actions .ui-icon {
+    display: none;
+  }
+  .preview-view-actions button,
+  .preview-view-actions .backdrop-controls > button {
+    font-size: 10px;
+    padding: 5px;
+  }
+  .preview-transparency-check {
+    gap: 0;
+  }
+  .background-removal-entry {
+    font-size: 10px;
+  }
+  .brush-top label {
+    font-size: 10px;
+  }
+}
+@media (pointer: coarse) {
+  .brush-top input[type="number"],
+  .brush-top select {
+    min-height: 44px;
+  }
+}
+
+@media (max-height: 650px) and (orientation: landscape) {
+  .brush-top:has(#brush-value) label {
+    font-size: 0;
+  }
+  .brush-top:has(#brush-value) label:after {
+    content: "大小";
+    font-size: 10px;
+  }
+  .brush-top input[type="number"] {
+    width: 46px;
+  }
+}

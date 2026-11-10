@@ -209,3 +209,7 @@ kbd {
   justify-content: center;
   gap: 3px;
 }
+.compact-tool-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(44px, 1fr));
+}

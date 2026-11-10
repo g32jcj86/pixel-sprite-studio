@@ -28,7 +28,7 @@ export function bindEditorInteractions() {
   area.append(coordinates);
   const picker = document.createElement("details");
   picker.className = "compact-tool-picker";
-  picker.innerHTML = `<summary aria-label="開啟工具與快捷鍵">工具與快捷鍵 <span>${icon("chevronDown")}</span></summary><div class="compact-tool-content"><div class="compact-tool-buttons"><button data-pick-tool="pencil" title="鉛筆 B" aria-label="鉛筆 B">${icon("pencil")}<small>B</small></button><button data-pick-tool="eraser" title="橡皮擦 E" aria-label="橡皮擦 E">${icon("eraser")}<small>E</small></button><button data-pick-tool="fill" title="填色 G" aria-label="填色 G">${icon("fill")}<small>G</small></button><button data-pick-tool="picker" title="滴管 I" aria-label="滴管 I">${icon("picker")}<small>I</small></button><button data-pick-tool="move" title="平移 H" aria-label="平移 H">${icon("move")}<small>H</small></button></div><div class="compact-brush-row"><button data-brush-step="-1" aria-label="縮小筆刷">${icon("minus")}<small>[</small></button><span data-brush-label></span><button data-brush-step="1" aria-label="放大筆刷">${icon("plus")}<small>]</small></button></div><div class="compact-shortcut-list"><button data-editor-command="palette">色庫 <kbd>P</kbd></button><button data-editor-command="grid">格線 <kbd>Shift G</kbd></button><button data-editor-command="previous">上一格 <kbd>←</kbd></button><button data-editor-command="next">下一格 <kbd>→</kbd></button><span>縮放 <kbd>− / ＋</kbd></span><span>播放 <kbd>Space</kbd></span><span>復原 <kbd>Ctrl / ⌘ Z</kbd></span><span>平移 <kbd>H / Space 拖曳</kbd></span></div></div>`;
+  picker.innerHTML = `<summary aria-label="開啟工具與快捷鍵">工具與快捷鍵 <span>${icon("chevronDown")}</span></summary><div class="compact-tool-content"><div class="compact-tool-buttons"><button data-pick-tool="pencil" title="鉛筆 B" aria-label="鉛筆 B">${icon("pencil")}<small>B</small></button><button data-pick-tool="eraser" title="橡皮擦 E" aria-label="橡皮擦 E">${icon("eraser")}<small>E</small></button><button data-pick-tool="backgroundEraser" title="去背橡皮擦 K" aria-label="去背橡皮擦 K">${icon("eraser")}<small>K 去背</small></button><button data-pick-tool="fill" title="填色 G" aria-label="填色 G">${icon("fill")}<small>G</small></button><button data-pick-tool="picker" title="滴管 I" aria-label="滴管 I">${icon("picker")}<small>I</small></button><button data-pick-tool="move" title="平移 H" aria-label="平移 H">${icon("move")}<small>H</small></button></div><div class="compact-brush-row"><button data-brush-step="-1" aria-label="縮小筆刷">${icon("minus")}<small>[</small></button><span data-brush-label></span><button data-brush-step="1" aria-label="放大筆刷">${icon("plus")}<small>]</small></button></div><div class="compact-shortcut-list"><button data-editor-command="palette">色庫 <kbd>P</kbd></button><button data-editor-command="grid">格線 <kbd>Shift G</kbd></button><button data-editor-command="previous">上一格 <kbd>←</kbd></button><button data-editor-command="next">下一格 <kbd>→</kbd></button><span>縮放 <kbd>− / ＋</kbd></span><span>播放 <kbd>Space</kbd></span><span>復原 <kbd>Ctrl / ⌘ Z</kbd></span><span>平移 <kbd>H / Space 拖曳</kbd></span></div></div>`;
   area.append(picker);
   picker.addEventListener("pointerdown", (event) => event.stopPropagation(), {
     signal,
@@ -59,12 +59,30 @@ export function bindEditorInteractions() {
       content.style.bottom = window.innerHeight - rect.top + "px";
       content.style.maxHeight = Math.max(90, rect.top - 8) + "px";
     }
-    const brush = document.querySelector<HTMLSelectElement>("#brush");
+    const brush = document.querySelector<HTMLInputElement | HTMLSelectElement>(
+      "#brush",
+    );
     const strTool =
       document.querySelector<HTMLElement>("[data-tool].active")?.dataset.tool ||
       "pencil";
     picker.querySelector("[data-brush-label]")!.textContent =
-      `${brush?.value || 1} px 筆刷`;
+      strTool === "backgroundEraser"
+        ? "去背容差 " +
+          (document.querySelector<HTMLInputElement>("#erase-tolerance")
+            ?.value || "0")
+        : `${brush?.value || 1} px 筆刷`;
+    picker
+      .querySelector("[data-brush-step='-1']")!
+      .setAttribute(
+        "aria-label",
+        strTool === "backgroundEraser" ? "降低去背容差" : "縮小筆刷",
+      );
+    picker
+      .querySelector("[data-brush-step='1']")!
+      .setAttribute(
+        "aria-label",
+        strTool === "backgroundEraser" ? "提高去背容差" : "放大筆刷",
+      );
     picker
       .querySelectorAll<HTMLElement>("[data-pick-tool]")
       .forEach((button) =>
@@ -107,13 +125,27 @@ export function bindEditorInteractions() {
   picker.addEventListener("toggle", refresh, { signal });
   window.addEventListener("resize", refresh, { signal });
   function stepBrush(iStep: number) {
-    const select = document.querySelector<HTMLSelectElement>("#brush");
-    if (!select) return;
-    select.selectedIndex = Math.max(
-      0,
-      Math.min(select.options.length - 1, select.selectedIndex + iStep),
-    );
-    select.dispatchEvent(new Event("change", { bubbles: true }));
+    const isBackground =
+      document.querySelector<HTMLElement>("[data-tool].active")?.dataset
+        .tool === "backgroundEraser";
+    const control = document.querySelector<
+      HTMLInputElement | HTMLSelectElement
+    >(isBackground ? "#erase-tolerance" : "#brush");
+    if (!control) return;
+    if (control instanceof HTMLSelectElement)
+      control.selectedIndex = Math.max(
+        0,
+        Math.min(control.options.length - 1, control.selectedIndex + iStep),
+      );
+    else
+      control.value = String(
+        Math.max(
+          control.min ? Number(control.min) : 0,
+          Math.min(Number(control.max) || 256, Number(control.value) + iStep),
+        ),
+      );
+    control.dispatchEvent(new Event("input", { bubbles: true }));
+    control.dispatchEvent(new Event("change", { bubbles: true }));
     refresh();
   }
   function command(strCommand: string) {

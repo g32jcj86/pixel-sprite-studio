@@ -1,3 +1,11 @@
+import {
+  alphaSummary,
+  pixelsToRgba,
+  detectBakedChecker,
+  removeBakedChecker,
+  removeExteriorColor,
+  type CheckerModel,
+} from "./alpha";
 import { icon } from "./icons";
 import "./assets.css";
 import type { Project } from "./types";
@@ -467,7 +475,12 @@ export function openImportDialog(
   let suggested: ReturnType<typeof detectSheetGrid> = null;
   let iPreview = 0,
     iTimer = 0;
-  const sources: { name: string; image: HTMLImageElement }[] = [];
+  const sources: {
+    name: string;
+    image: HTMLImageElement;
+    alpha: ReturnType<typeof alphaSummary>;
+    checker: CheckerModel | null;
+  }[] = [];
   let imported: string[][] = [];
   let cellRows: string[] = [];
   const skipped = new Set<number>();
@@ -619,6 +632,12 @@ export function openImportDialog(
     isNewProject;
   (element.querySelector("#keep-project-size") as HTMLElement).hidden =
     isNewProject;
+  const alphaCard = document.createElement("div");
+  alphaCard.className = "import-alpha-card";
+  alphaCard.hidden = true;
+  alphaCard.innerHTML =
+    '<strong>圖片實際透明度</strong><p id="import-source-alpha"></p><p id="import-output-alpha"></p><label><input id="remove-baked-checker" type="checkbox">預覽移除圖片內已畫入的外連棋盤</label><p id="import-checker-status"></p>';
+  simple.querySelector(".import-live-preview")!.after(alphaCard);
   const autoFitLabel = document.createElement("label");
   autoFitLabel.innerHTML =
     '<input id="auto-fit" type="checkbox" checked>自動等比例縮放每格';
@@ -698,6 +717,14 @@ export function openImportDialog(
     }
     iPreview = Math.min(iPreview, imported.length - 1);
     draw(canvas, imported[iPreview], iOutputWidth, iOutputHeight);
+    const alpha = alphaSummary(pixelsToRgba(imported[iPreview]));
+    element.querySelector("#import-output-alpha")!.textContent =
+      "本格輸出 Alpha：透明 " +
+      alpha.transparent +
+      "／半透明 " +
+      alpha.partial +
+      "／不透明 " +
+      alpha.opaque;
     (element.querySelector("#slice-frame") as HTMLInputElement).max = String(
       imported.length,
     );
@@ -795,7 +822,39 @@ export function openImportDialog(
     (element.querySelector("#auto-fit") as HTMLInputElement).checked = false;
   });
   selectMode(false);
+  element
+    .querySelector("#remove-baked-checker")!
+    .addEventListener("change", () => update());
+  function refreshAlphaStatus() {
+    alphaCard.hidden = !sources.length;
+    const checkerCount = sources.filter((source) => source.checker).length;
+    (
+      element.querySelector("#remove-baked-checker") as HTMLInputElement
+    ).disabled = !checkerCount;
+    if (!checkerCount)
+      (
+        element.querySelector("#remove-baked-checker") as HTMLInputElement
+      ).checked = false;
+    if (!sources.length) return;
+    const alpha = sources[0].alpha;
+    element.querySelector("#import-source-alpha")!.textContent =
+      "來源" +
+      (sources.length > 1 ? "第 1 張" : "") +
+      " Alpha：透明 " +
+      alpha.transparent +
+      "／半透明 " +
+      alpha.partial +
+      "／不透明 " +
+      alpha.opaque +
+      (alpha.transparent || alpha.partial
+        ? "（來源含真正 Alpha）"
+        : "（來源完全不透明）");
+    element.querySelector("#import-checker-status")!.textContent = checkerCount
+      ? "偵測到疑似已畫入原圖的規則棋盤。僅在勾選後產生去背預覽，請確認角色邊緣再套用。"
+      : "未確認規則棋盤；不會自動刪除像素。此處統計不包含動畫預覽的背景圖片或底色。";
+  }
   const update = () => {
+    refreshAlphaStatus();
     imported = [];
     cellRows = [];
     (element.querySelector("[data-apply]") as HTMLButtonElement).disabled =
@@ -879,6 +938,15 @@ export function openImportDialog(
       const context = canvas.getContext("2d")!;
       context.drawImage(source.image, 0, 0);
       const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      if (
+        (element.querySelector("#remove-baked-checker") as HTMLInputElement)
+          .checked &&
+        source.checker
+      )
+        data.set(
+          removeBakedChecker(data, canvas.width, canvas.height, source.checker)
+            .data,
+        );
       if ((element.querySelector("#remove") as HTMLInputElement).checked) {
         const selected = background || Array.from(data.slice(0, 4));
         const queue: number[] = [];
@@ -1171,7 +1239,19 @@ export function openImportDialog(
             "圖片超過 1600 萬像素，請縮小後重試。";
           continue;
         }
-        sources.push({ name: file.name, image });
+        const analysisCanvas = document.createElement("canvas");
+        analysisCanvas.width = image.width;
+        analysisCanvas.height = image.height;
+        analysisCanvas.getContext("2d")!.drawImage(image, 0, 0);
+        const imagePixels = analysisCanvas
+          .getContext("2d")!
+          .getImageData(0, 0, image.width, image.height).data;
+        sources.push({
+          name: file.name,
+          image,
+          alpha: alphaSummary(imagePixels),
+          checker: detectBakedChecker(imagePixels, image.width, image.height),
+        });
       } catch {
         element.querySelector("[data-info]")!.textContent =
           `無法讀取 ${file.name}`;
@@ -1286,4 +1366,152 @@ export function openImportDialog(
   if (initialFiles.length) void loadFiles(initialFiles);
   else if (isChooseFiles)
     (element.querySelector("#files") as HTMLInputElement).click();
+}
+
+export function openBackgroundRemovalDialog(
+  project: AssetProject,
+  onApply: Apply,
+  iAction = 0,
+  iFrame = 0,
+  inspectionOnly = false,
+) {
+  const original = project.actions[iAction].frames[iFrame];
+  const initial = pixelsToRgba(original.pixels);
+  const initialChecker = detectBakedChecker(
+    initial,
+    project.width,
+    project.height,
+  );
+  let next = structuredClone(project),
+    removedTotal = 0;
+  const element = dialog(
+    "檢查透明與圖片去背",
+    '<p>此檢查只顯示圖像的實際 Alpha，不包含動畫預覽的背景圖片或底色。</p><div class="cleanup-options"><label>套用範圍<select id="cleanup-scope"><option value="frame">目前影格</option><option value="action">目前動作全部影格</option><option value="all">所有動作全部影格</option></select></label><label>處理方式<select id="cleanup-method"><option value="inspect">只檢查透明度</option><option value="checker">移除已畫入的外連棋盤</option><option value="color">移除外連單色背景</option></select></label><label id="cleanup-color-label">背景色<input id="cleanup-color" type="color" value="#ffffff"></label><label>預覽影格<select id="cleanup-frame"></select></label></div><p id="cleanup-source-alpha"></p><p id="cleanup-result-alpha"></p><p id="cleanup-status" role="status"></p><div class="asset-compare cleanup-compare"><div>處理前（洋紅底檢查）<canvas data-cleanup-before class="asset-preview"></canvas></div><div>處理後（洋紅底檢查）<canvas data-cleanup-after class="asset-preview"></canvas></div></div><p>只移除與外部連通的背景；封閉外框內的白色會保留。請預覽後套用，可使用復原返回。</p>',
+    () => {
+      if (removedTotal) {
+        onApply(next);
+        element.close();
+      }
+    },
+  );
+  (element.querySelector("#cleanup-method") as HTMLSelectElement).value =
+    !inspectionOnly && initialChecker ? "checker" : "inspect";
+  const scopeInput =
+      element.querySelector<HTMLSelectElement>("#cleanup-scope")!,
+    frameInput = element.querySelector<HTMLSelectElement>("#cleanup-frame")!;
+  function targets() {
+    const scope = scopeInput.value;
+    return project.actions.flatMap((action, a) =>
+      action.frames.flatMap((frame, f) =>
+        scope === "all" ||
+        (a === iAction && (scope === "action" || f === iFrame))
+          ? [{ a, f, frame }]
+          : [],
+      ),
+    );
+  }
+  function refreshFrames() {
+    const value = frameInput.value;
+    frameInput.replaceChildren();
+    targets().forEach(({ a, f }) => {
+      const option = document.createElement("option");
+      option.value = a + ":" + f;
+      option.textContent = project.actions[a].name + " · 第 " + (f + 1) + " 格";
+      frameInput.append(option);
+    });
+    if ([...frameInput.options].some((option) => option.value === value))
+      frameInput.value = value;
+  }
+  function update() {
+    next = structuredClone(project);
+    removedTotal = 0;
+    const method = (
+      element.querySelector("#cleanup-method") as HTMLSelectElement
+    ).value;
+    (element.querySelector("#cleanup-color-label") as HTMLElement).hidden =
+      method !== "color";
+    const strColor = (
+        element.querySelector("#cleanup-color") as HTMLInputElement
+      ).value,
+      color = [1, 3, 5].map((i) => parseInt(strColor.slice(i, i + 2), 16));
+    let detected = 0;
+    targets().forEach(({ a, f, frame }) => {
+      const data = pixelsToRgba(frame.pixels);
+      let result = { data, removed: 0 };
+      if (method === "checker") {
+        const checker = detectBakedChecker(data, project.width, project.height);
+        if (checker) {
+          detected++;
+          result = removeBakedChecker(
+            data,
+            project.width,
+            project.height,
+            checker,
+          );
+        }
+      } else if (method === "color")
+        result = removeExteriorColor(
+          data,
+          project.width,
+          project.height,
+          color,
+        );
+      removedTotal += result.removed;
+      next.actions[a].frames[f].pixels = frame.pixels.map((pixel, i) =>
+        data[i * 4 + 3] !== 0 && result.data[i * 4 + 3] === 0 ? "" : pixel,
+      );
+    });
+    const [a, f] = frameInput.value.split(":").map(Number),
+      before = project.actions[a].frames[f].pixels,
+      after = next.actions[a].frames[f].pixels;
+    const source = alphaSummary(pixelsToRgba(before)),
+      result = alphaSummary(pixelsToRgba(after));
+    element.querySelector("#cleanup-source-alpha")!.textContent =
+      "處理前 Alpha：透明 " +
+      source.transparent +
+      "／半透明 " +
+      source.partial +
+      "／不透明 " +
+      source.opaque;
+    element.querySelector("#cleanup-result-alpha")!.textContent =
+      "處理後 Alpha：透明 " +
+      result.transparent +
+      "／半透明 " +
+      result.partial +
+      "／不透明 " +
+      result.opaque;
+    element.querySelector("#cleanup-status")!.textContent =
+      method === "inspect"
+        ? "目前僅檢查，不修改像素。洋紅透出的區域才是真正透明。"
+        : method === "checker" && !detected
+          ? "沒有確認規則棋盤；不會自動刪除。可改用外連單色背景，或先確認預覽背景圖片。"
+          : "預計移除 " +
+            removedTotal +
+            " 個背景像素（" +
+            targets().length +
+            " 格），角色與參考圖其餘資料保持原樣。";
+    draw(
+      element.querySelector("[data-cleanup-before]")!,
+      before,
+      project.width,
+      project.height,
+    );
+    draw(
+      element.querySelector("[data-cleanup-after]")!,
+      after,
+      project.width,
+      project.height,
+    );
+    (element.querySelector("[data-apply]") as HTMLButtonElement).disabled =
+      !removedTotal;
+  }
+  scopeInput.addEventListener("change", () => {
+    refreshFrames();
+    update();
+  });
+  element
+    .querySelectorAll("select:not(#cleanup-scope),input")
+    .forEach((input) => input.addEventListener("input", update));
+  refreshFrames();
+  update();
 }

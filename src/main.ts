@@ -6,6 +6,7 @@ import {
   openResizeDialog,
   openPaletteDialog,
   openAlignmentDialog,
+  openBackgroundRemovalDialog,
 } from "./assets";
 import { openExportDialog } from "./export-ui";
 import { bindEditorInteractions } from "./interaction";
@@ -78,6 +79,8 @@ let isGrid = true,
 let iBrush = 1,
   iPlayback = 0,
   iSaveTimer = 0;
+const brushSizes: Record<string, number> = { pencil: 1, eraser: 16 };
+let iEraseTolerance = 12;
 let lastPoint: { x: number; y: number } | null = null;
 let history: string[] = [],
   future: string[] = [];
@@ -105,10 +108,24 @@ let touchPixels: string[] | null = null;
 const icons: Record<string, string> = {
   pencil: icon("pencil", 27),
   eraser: icon("eraser", 27),
+  backgroundEraser: icon("eraser", 27),
   fill: icon("fill", 27),
   picker: icon("picker", 27),
   move: icon("move", 27),
 };
+function brushControls() {
+  const hasBrush = strTool === "pencil" || strTool === "eraser";
+  return `<div class="brush-settings"><div class="brush-size-block" ${hasBrush ? "" : "hidden"}><div class="brush-top"><label for="brush-value">${strTool === "eraser" ? "橡皮擦" : "筆刷"}大小</label><input id="brush-value" type="number" min="1" max="256" step="1" value="${iBrush}" aria-label="筆刷大小像素"><select id="brush-preset" aria-label="筆刷預設大小"><option value="">預設</option>${[1, 2, 4, 8, 16, 32, 64, 128, 256].map((size) => `<option value="${size}" ${size === iBrush ? "selected" : ""}>${size}px</option>`).join("")}</select></div><input id="brush" type="range" min="1" max="256" step="1" value="${iBrush}" aria-label="筆刷與橡皮擦大小"></div><div class="background-erase-settings" ${strTool === "backgroundEraser" ? "" : "hidden"}><div class="brush-top"><label for="erase-tolerance-value">去背容差</label><input id="erase-tolerance-value" type="number" min="0" max="100" step="1" value="${iEraseTolerance}" aria-label="去背色彩容差"><span>0–100</span></div><input id="erase-tolerance" type="range" min="0" max="100" value="${iEraseTolerance}" aria-label="去背容差"><p>點一下清除相連背景，真正變透明。容差越大，清除的近似色越多。</p></div></div>`;
+}
+function openTransparencyTool(inspectionOnly = false) {
+  openBackgroundRemovalDialog(
+    project,
+    applyCurrentProject,
+    iAction,
+    iFrame,
+    inspectionOnly,
+  );
+}
 const TRASH_ICON = icon("trash", 20);
 const PAPER_LOGO =
   '<svg viewBox="0 0 36 42" aria-hidden="true"><path d="M3 2h22l9 9v29H3z" fill="white" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><path d="M25 2v10h9" fill="#ff6200" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><path d="M10 20h4v4h-4zm12 0h4v4h-4zM8 25h4v4H8zm16 0h4v4h-4zM12 29h4v4h-4zm4 3h4v4h-4zm4-3h4v4h-4z" fill="#ff6200"/></svg>';
@@ -205,17 +222,17 @@ function render() {
   document.body.classList.remove("home-open");
   root.innerHTML = `<div class="orientation-gate"><div class="rotate-icon">${icon("rotatePhone", 56)}</div><h2>請將裝置轉為橫向</h2><p>請將手機或平板轉為橫向，<br>讓畫布與工具擁有足夠空間。</p><span>我的點陣圖</span></div>
     <header><a class="brand" href="#"><span class="brand-icon">${PAPER_LOGO}</span><span>我的點陣圖</span></a><div class="project-heading"><input id="project-name" aria-label="專案名稱" value="${escape(project.name)}"><span id="save-status">● 已自動儲存於此裝置</span></div><div class="header-actions"><button id="gallery">${icon("home")}<span>首頁</span></button><button class="primary" id="export">${icon("download")}<span>預覽與下載</span></button></div></header>
-    <main><aside class="left-panel"><div class="section-label">繪圖工具 </div><div class="tools">${Object.entries(
+    <main><aside class="left-panel"><div class="section-label">繪圖工具 </div><div class="tools toolset-extended">${Object.entries(
       icons,
     )
       .map(
         ([strKey, strIcon]) =>
-          `<button data-tool="${strKey}" class="tool ${strTool === strKey ? "active" : ""}" title="${({ pencil: "鉛筆 B", eraser: "橡皮擦 E", fill: "油漆桶 G", picker: "滴管 I", move: "平移 H" } as Record<string, string>)[strKey]}"><b>${strIcon}</b><span>${({ pencil: "鉛筆", eraser: "橡皮擦", fill: "填色", picker: "滴管", move: "平移" } as Record<string, string>)[strKey]}</span></button>`,
+          `<button data-tool="${strKey}" class="tool ${strTool === strKey ? "active" : ""}" title="${({ pencil: "鉛筆 B", eraser: "橡皮擦 E：拖曳清除像素，變成透明", backgroundEraser: "去背橡皮擦 K：點一下清除相連背景，不是塗白", fill: "油漆桶 G", picker: "滴管 I", move: "平移 H" } as Record<string, string>)[strKey]}"><b>${strIcon}</b><span>${({ pencil: "鉛筆", eraser: "橡皮擦", backgroundEraser: "去背", fill: "填色", picker: "滴管", move: "平移" } as Record<string, string>)[strKey]}</span></button>`,
       )
       .join(
         "",
-      )}</div><div class="brush-row"><label for="brush">筆刷大小</label><select id="brush"><option value="1">1 px</option><option value="2">2 px</option><option value="3">3 px</option></select></div><div id="color-panel"></div><div class="left-bottom"><span>⌘ Z 復原</span><span>B 鉛筆 · E 橡皮擦</span><span>Space ＋ 拖曳平移</span><button id="help">${icon("keyboard", 16)}<span>快捷鍵與操作說明</span></button></div></aside>
-    <section class="workspace"><div class="canvas-toolbar"><div class="canvas-title"><span class="status-dot"></span><strong>${escape(action().name)}</strong><span class="muted">/ 第 ${iFrame + 1} 格</span></div><div class="canvas-controls"><button id="undo" title="復原 Ctrl+Z">${icon("undo")}</button><button id="redo" title="重做 Ctrl+Shift+Z">${icon("redo")}</button><i></i><button id="grid" class="${isGrid ? "toggle-on" : ""}" aria-pressed="${isGrid}" aria-label="顯示像素格線" title="顯示像素格線">${icon("grid")}</button><button id="onion" class="${isOnion ? "toggle-on" : ""}" title="洋蔥皮：顯示前一格">${icon("layers")}</button><i></i><button id="zoom-out" title="縮小">${icon("minus")}</button><button id="zoom-reset" class="zoom-value">${Math.round(iZoom * 100)}%</button><button id="zoom-in" title="放大">${icon("plus")}</button></div></div><div id="canvas-area"><div class="canvas-caption">${project.width} × ${project.height} px · 透明背景</div><div id="canvas-holder"><canvas id="reference-canvas"></canvas><canvas id="onion-canvas"></canvas><canvas id="drawing-canvas" aria-label="像素繪圖畫布"></canvas><div id="grid-overlay"></div><div id="pivot-marker" title="對齊基準點">${icon("plus", 18)}</div></div><div class="canvas-tip">${icons[strTool]} ${({ pencil: "鉛筆工具", eraser: "橡皮擦工具", fill: "填色工具", picker: "滴管工具", move: "平移工具" } as Record<string, string>)[strTool]}<span>滾輪縮放 · 雙指縮放</span></div></div><div class="timeline"><div class="timeline-heading"><div><strong>時間軸</strong><span id="frame-count">${action().frames.length} 格</span></div><div class="timeline-actions"><button id="duplicate-frame" title="選擇複製影格的插入位置">${icon("copy", 17)}<span>複製</span></button><button id="delete-frame" title="刪除目前影格" aria-label="刪除目前影格">${icon("trash", 17)}</button><button id="add-frame" class="soft-button" aria-label="新增影格" title="新增影格">${icon("plus", 17)}<span>新增影格</span></button></div></div><div class="timeline-bottom"><button id="play" class="play-button" aria-label="${isPlaying ? "暫停動畫" : "播放動畫"}">${icon(isPlaying ? "pause" : "play", 20)}</button><div id="frames"></div><div class="timeline-fps"><label for="fps">速度</label><div><input id="fps" type="number" min="1" max="30" value="${action().fps}"><span>FPS</span></div></div></div></div></section>
+      )}</div>${brushControls()}<div id="color-panel"></div><div class="left-bottom"><span>⌘ Z 復原</span><span>B 鉛筆 · E 橡皮擦</span><span>Space ＋ 拖曳平移</span><button id="help">${icon("keyboard", 16)}<span>快捷鍵與操作說明</span></button></div></aside>
+    <section class="workspace"><div class="canvas-toolbar"><div class="canvas-title"><span class="status-dot"></span><strong>${escape(action().name)}</strong><span class="muted">/ 第 ${iFrame + 1} 格</span></div><div class="canvas-controls"><button id="undo" title="復原 Ctrl+Z">${icon("undo")}</button><button id="redo" title="重做 Ctrl+Shift+Z">${icon("redo")}</button><i></i><button id="grid" class="${isGrid ? "toggle-on" : ""}" aria-pressed="${isGrid}" aria-label="顯示像素格線" title="顯示像素格線">${icon("grid")}</button><button id="onion" class="${isOnion ? "toggle-on" : ""}" title="洋蔥皮：顯示前一格">${icon("layers")}</button><i></i><button id="zoom-out" title="縮小">${icon("minus")}</button><button id="zoom-reset" class="zoom-value">${Math.round(iZoom * 100)}%</button><button id="zoom-in" title="放大">${icon("plus")}</button></div></div><div id="canvas-area"><div class="canvas-caption">${project.width} × ${project.height} px · 透明背景</div><div id="canvas-holder"><canvas id="reference-canvas"></canvas><canvas id="onion-canvas"></canvas><canvas id="drawing-canvas" aria-label="像素繪圖畫布"></canvas><div id="grid-overlay"></div><div id="pivot-marker" title="對齊基準點">${icon("plus", 18)}</div></div><div class="canvas-tip">${icons[strTool]} ${({ pencil: "鉛筆工具", eraser: "橡皮擦工具", backgroundEraser: "去背橡皮擦：點選相連背景", fill: "填色工具", picker: "滴管工具", move: "平移工具" } as Record<string, string>)[strTool]}<span>滾輪縮放 · 雙指縮放</span></div></div><div class="timeline"><div class="timeline-heading"><div><strong>時間軸</strong><span id="frame-count">${action().frames.length} 格</span></div><div class="timeline-actions"><button id="duplicate-frame" title="選擇複製影格的插入位置">${icon("copy", 17)}<span>複製</span></button><button id="delete-frame" title="刪除目前影格" aria-label="刪除目前影格">${icon("trash", 17)}</button><button id="add-frame" class="soft-button" aria-label="新增影格" title="新增影格">${icon("plus", 17)}<span>新增影格</span></button></div></div><div class="timeline-bottom"><button id="play" class="play-button" aria-label="${isPlaying ? "暫停動畫" : "播放動畫"}">${icon(isPlaying ? "pause" : "play", 20)}</button><div id="frames"></div><div class="timeline-fps"><label for="fps">速度</label><div><input id="fps" type="number" min="1" max="30" value="${action().fps}"><span>FPS</span></div></div></div></div></section>
     <aside class="right-panel"><div class="section-label">動畫預覽 </div><div class="preview-box"><canvas id="preview-canvas"></canvas><span>${isPlaying ? "播放中" : "即時預覽"}</span></div><div class="preview-options"><label><input id="loop" type="checkbox" ${action().loop ? "checked" : ""}> 匯出循環</label><span>1× 原始比例</span></div><div class="divider"></div><div class="section-label">動作列表 <button id="add-action" title="新增動作">${icon("plus")}</button></div><div class="action-list">${project.actions.map((item, i) => `<button data-action="${i}" class="action-item ${i === iAction ? "selected" : ""}"><span class="action-symbol">${icon("film", 18)}</span><span><strong>${escape(item.name)}</strong><small>${item.frames.length} 格影格 · ${item.fps} FPS</small></span><span class="action-arrow">${icon(i === iAction ? "check" : "chevronRight", 14)}</span></button>`).join("")}</div><div class="action-management"><button id="rename-action">重新命名</button><button id="delete-action">刪除動作</button></div><div class="divider"></div><div class="section-label">畫布設定</div><div class="setting-row"><span>畫布尺寸</span><button id="resize">${project.width} × ${project.height} ${icon("expand", 14)}</button></div><div class="setting-row"><span>對齊基準</span><button id="alignment">${project.pivot.x}, ${project.pivot.y} ${icon("target", 14)}</button></div><div class="setting-row"><span>背景</span><span class="muted">透明</span></div><button id="templates" class="template-card"><span>${icon("plus", 21)}</span><strong>新增空白作品</strong></button><button id="versions" class="version-link">${icon("history", 16)}<span>版本紀錄與快照</span></button></aside></main><footer><span><i class="status-dot"></i> 自動儲存於此瀏覽器</span><span>${project.width} × ${project.height} px <b>·</b> ${project.actions.length} 個動作 <b>·</b> ${action().frames.length} 格影格</span></footer><div id="toast" role="status"></div><dialog id="modal"></dialog>`;
   mountColorPanel(
     document.querySelector<HTMLElement>("#color-panel")!,
@@ -285,7 +302,17 @@ function render() {
   );
   const previewHost = document.createElement("div");
   previewHost.className = "preview-backdrop-controls";
-  previewDock.append(previewHost);
+  const previewActions = document.createElement("div");
+  previewActions.className = "preview-view-actions";
+  previewActions.append(previewHost);
+  previewDock.append(previewActions);
+  const alphaCheck = document.createElement("button");
+  alphaCheck.id = "inspect-transparency";
+  alphaCheck.className = "preview-transparency-check";
+  alphaCheck.innerHTML = `${icon("checker", 15)}<span>檢查透明</span>`;
+  alphaCheck.title = "檢查真正的圖片像素，不包含預覽背景圖片";
+  alphaCheck.onclick = () => openTransparencyTool(true);
+  previewActions.append(alphaCheck);
   const inspection = document.createElement("button");
   inspection.id = "pixel-inspection-toggle";
   inspection.className = "pixel-inspection-control";
@@ -330,6 +357,13 @@ function render() {
     renderCanvases();
   };
   document.querySelector("#templates")!.before(opacity);
+  const cleanup = document.createElement("button");
+  cleanup.id = "remove-background";
+  cleanup.className = "background-removal-entry";
+  cleanup.innerHTML = `${icon("eraser", 17)}<span>圖片去背</span>`;
+  cleanup.title = "為既有影格去背，套用前可預覽並可復原";
+  cleanup.onclick = () => openTransparencyTool();
+  document.querySelector("#templates")!.before(cleanup);
   const more = document.createElement("button");
   more.innerHTML = icon("ellipsis");
   more.title = "影格操作與位移";
@@ -476,19 +510,57 @@ function point(event: PointerEvent) {
   };
 }
 function drawPoint(iX: number, iY: number) {
-  for (let y = 0; y < iBrush; y++)
-    for (let x = 0; x < iBrush; x++) {
-      const iColumn = iX + x,
-        iRow = iY + y;
-      if (
-        iColumn >= 0 &&
-        iColumn < project.width &&
-        iRow >= 0 &&
-        iRow < project.height
-      )
-        frame().pixels[iRow * project.width + iColumn] =
-          strTool === "eraser" ? "" : strColor;
-    }
+  const iEndX = Math.min(project.width, iX + iBrush),
+    iEndY = Math.min(project.height, iY + iBrush);
+  for (let y = Math.max(0, iY); y < iEndY; y++)
+    for (let x = Math.max(0, iX); x < iEndX; x++)
+      frame().pixels[y * project.width + x] =
+        strTool === "eraser" ? "" : strColor;
+}
+function eraseConnectedBackground(iX: number, iY: number) {
+  const canvas = document.querySelector<HTMLCanvasElement>("#drawing-canvas")!;
+  const rgba = canvas
+    .getContext("2d")!
+    .getImageData(0, 0, project.width, project.height).data;
+  const iStart = iY * project.width + iX,
+    iColor = iStart * 4;
+  if (!rgba[iColor + 3]) return false;
+  const pending = [iStart],
+    visited = new Uint8Array(frame().pixels.length),
+    removed: number[] = [];
+  visited[iStart] = 1;
+  while (pending.length) {
+    const i = pending.pop()!,
+      iOffset = i * 4,
+      iColumn = i % project.width;
+    if (
+      !rgba[iOffset + 3] ||
+      Math.max(
+        Math.abs(rgba[iOffset] - rgba[iColor]),
+        Math.abs(rgba[iOffset + 1] - rgba[iColor + 1]),
+        Math.abs(rgba[iOffset + 2] - rgba[iColor + 2]),
+      ) > iEraseTolerance
+    )
+      continue;
+    removed.push(i);
+    const neighbors = [
+      i - project.width,
+      i + project.width,
+      ...(iColumn ? [i - 1] : []),
+      ...(iColumn < project.width - 1 ? [i + 1] : []),
+    ];
+    neighbors.forEach((iNeighbor) => {
+      if (iNeighbor >= 0 && iNeighbor < visited.length && !visited[iNeighbor]) {
+        visited[iNeighbor] = 1;
+        pending.push(iNeighbor);
+      }
+    });
+  }
+  if (!removed.length) return false;
+  checkpoint();
+  removed.forEach((i) => (frame().pixels[i] = ""));
+  changed();
+  return true;
 }
 function stroke(next: { x: number; y: number }) {
   const previous = lastPoint || next,
@@ -538,6 +610,7 @@ function selectColor(strNext: string) {
 }
 function setTool(strNext: string) {
   strTool = strNext;
+  iBrush = brushSizes[strNext] ?? iBrush;
   render();
 }
 function zoom(iNext: number) {
@@ -565,11 +638,50 @@ function bind() {
         render();
       }),
   );
-  (document.querySelector("#brush") as HTMLSelectElement).value =
-    String(iBrush);
-  document.querySelector("#brush")!.addEventListener("change", (event) => {
-    iBrush = Number((event.target as HTMLSelectElement).value);
-  });
+  const brush = document.querySelector<HTMLInputElement>("#brush")!;
+  const brushValue = document.querySelector<HTMLInputElement>("#brush-value")!;
+  const preset = document.querySelector<HTMLSelectElement>("#brush-preset")!;
+  const updateBrush = () => {
+    iBrush = Math.max(1, Math.min(256, Math.round(Number(brush.value) || 1)));
+    brush.value = brushValue.value = String(iBrush);
+    preset.value = [1, 2, 4, 8, 16, 32, 64, 128, 256].includes(iBrush)
+      ? String(iBrush)
+      : "";
+    if (strTool === "pencil" || strTool === "eraser")
+      brushSizes[strTool] = iBrush;
+  };
+  brush.addEventListener("input", updateBrush);
+  brush.addEventListener("change", updateBrush);
+  brushValue.onchange = () => {
+    brush.value = brushValue.value;
+    brush.dispatchEvent(new Event("input"));
+    brush.dispatchEvent(new Event("change"));
+  };
+  preset.onchange = () => {
+    if (!preset.value) return;
+    brush.value = preset.value;
+    brush.dispatchEvent(new Event("input"));
+    brush.dispatchEvent(new Event("change"));
+  };
+  const tolerance =
+      document.querySelector<HTMLInputElement>("#erase-tolerance")!,
+    toleranceValue = document.querySelector<HTMLInputElement>(
+      "#erase-tolerance-value",
+    )!;
+  const updateTolerance = () => {
+    iEraseTolerance = Math.max(
+      0,
+      Math.min(100, Math.round(Number(tolerance.value) || 0)),
+    );
+    tolerance.value = toleranceValue.value = String(iEraseTolerance);
+  };
+  tolerance.addEventListener("input", updateTolerance);
+  tolerance.addEventListener("change", updateTolerance);
+  toleranceValue.onchange = () => {
+    tolerance.value = toleranceValue.value;
+    tolerance.dispatchEvent(new Event("input"));
+    tolerance.dispatchEvent(new Event("change"));
+  };
   document
     .querySelector("#color")!
     .addEventListener("input", (event) =>
@@ -743,6 +855,13 @@ function bind() {
     if (strTool === "picker") {
       const strPicked = frame().pixels[position.y * project.width + position.x];
       if (strPicked) selectColor(strPicked);
+      return;
+    }
+    if (strTool === "backgroundEraser") {
+      const previous =
+        event.pointerType === "touch" ? [...frame().pixels] : null;
+      const hasErased = eraseConnectedBackground(position.x, position.y);
+      touchPixels = hasErased ? previous : null;
       return;
     }
     if (event.pointerType === "touch") touchPixels = [...frame().pixels];
@@ -1175,6 +1294,14 @@ function frameMenu() {
     "影格操作",
     `<div class="nudge-layout"><div><h3>角色位移</h3><p class="tiny">每次移動 1 px，畫布外的像素會裁切。</p><div class="nudge-buttons"><button data-nudge="0,-1">${icon("arrowUp")}</button><button data-nudge="-1,0">${icon("arrowLeft")}</button><button data-nudge="1,0">${icon("arrowRight")}</button><button data-nudge="0,1">${icon("arrowDown")}</button></div></div><div><h3>動作整理</h3><div class="export-options"><button id="frame-left"><strong>影格向前移</strong></button><button id="frame-right"><strong>影格向後移</strong></button><button id="new-role"><strong>從目前姿勢建立新角色</strong><small>保留色盤與尺寸，以這一格重新開始</small></button></div></div></div>`,
   );
+  const cleanup = document.createElement("button");
+  cleanup.id = "frame-remove-background";
+  cleanup.innerHTML = `<span class="ui-icon-label">${icon("eraser", 18)}<strong>圖片去背</strong></span><small>檢查真正的透明度，預覽後套用；可復原。</small>`;
+  cleanup.onclick = () => {
+    dialog.close();
+    openTransparencyTool();
+  };
+  dialog.querySelector(".export-options")!.append(cleanup);
   dialog.querySelectorAll<HTMLButtonElement>("[data-nudge]").forEach(
     (button) =>
       (button.onclick = () => {
@@ -1528,6 +1655,7 @@ document.addEventListener("keydown", (event) => {
   const tools: Record<string, string> = {
     b: "pencil",
     e: "eraser",
+    k: "backgroundEraser",
     g: "fill",
     i: "picker",
     h: "move",
