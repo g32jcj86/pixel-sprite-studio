@@ -108,6 +108,12 @@ const icons: Record<string, string> = {
 };
 const TRASH_ICON =
   '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></svg>';
+const PAPER_LOGO =
+  '<svg viewBox="0 0 36 42" aria-hidden="true"><path d="M3 2h22l9 9v29H3z" fill="white" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><path d="M25 2v10h9" fill="#ff6200" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><path d="M10 20h4v4h-4zm12 0h4v4h-4zM8 25h4v4H8zm16 0h4v4h-4zM12 29h4v4h-4zm4 3h4v4h-4zm4-3h4v4h-4z" fill="#ff6200"/></svg>';
+const UPLOAD_ART =
+  '<svg viewBox="0 0 150 90" aria-hidden="true"><rect x="42" y="5" width="66" height="53" rx="3"/><circle cx="90" cy="20" r="5"/><path d="m43 49 19-19 18 19 10-9 17 17M75 66v18m-8-8 8 8 8-8"/><path class="accent-stroke" d="M75 66v18m-8-8 8 8 8-8"/></svg>';
+const DRAW_ART =
+  '<svg viewBox="0 0 150 90" aria-hidden="true"><path d="M30 8h72v72H30z"/><path class="grid-stroke" d="M48 8v72M66 8v72M84 8v72M30 26h72M30 44h72M30 62h72"/><path class="pencil-fill" d="m104 20 12 7-27 45-15 8 1-17z"/><path d="m104 20 12 7-27 45-15 8 1-17zM75 63l14 9M99 28l12 7M78 68l5 3"/></svg>';
 const escape = (strValue: string) =>
   strValue.replace(
     /[&<>"']/g,
@@ -195,7 +201,7 @@ function paintCanvas(canvas: HTMLCanvasElement, pixels: string[], iScale = 1) {
 function render() {
   document.body.classList.remove("home-open");
   root.innerHTML = `<div class="orientation-gate"><div class="rotate-icon">▯ ↻</div><h2>請將裝置轉為橫向</h2><p>請將手機或平板轉為橫向，<br>讓畫布與工具擁有足夠空間。</p><span>我的點陣圖</span></div>
-    <header><a class="brand" href="#"><span class="brand-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h6v6H3zm7 0h6v6h-6zm7 0h4v6h-4zM3 10h6v6H3zm7 0h6v6h-6zm7 0h4v6h-4zM3 17h6v4H3zm7 0h6v4h-6z" fill="currentColor"/></svg></span><span>我的點陣圖</span></a><div class="project-heading"><input id="project-name" aria-label="專案名稱" value="${escape(project.name)}"><span id="save-status">● 已自動儲存於此裝置</span></div><div class="header-actions"><button id="gallery">▦ <span>首頁</span></button><button class="primary" id="export">匯出作品 ↗</button></div></header>
+    <header><a class="brand" href="#"><span class="brand-icon">${PAPER_LOGO}</span><span>我的點陣圖</span></a><div class="project-heading"><input id="project-name" aria-label="專案名稱" value="${escape(project.name)}"><span id="save-status">● 已自動儲存於此裝置</span></div><div class="header-actions"><button id="gallery">▦ <span>首頁</span></button><button class="primary" id="export">↓ 預覽與下載</button></div></header>
     <main><aside class="left-panel"><div class="section-label">繪圖工具 </div><div class="tools">${Object.entries(
       icons,
     )
@@ -206,8 +212,8 @@ function render() {
       .join(
         "",
       )}</div><div class="brush-row"><label for="brush">筆刷大小</label><select id="brush"><option value="1">1 px</option><option value="2">2 px</option><option value="3">3 px</option></select></div><div id="color-panel"></div><div class="left-bottom"><span>⌘ Z 復原</span><span>B 鉛筆 · E 橡皮擦</span><span>Space ＋ 拖曳平移</span><button id="help">⌨ 快捷鍵與操作說明</button></div></aside>
-    <section class="workspace"><div class="canvas-toolbar"><div class="canvas-title"><span class="status-dot"></span><strong>${escape(action().name)}</strong><span class="muted">/ 第 ${iFrame + 1} 格</span></div><div class="canvas-controls"><button id="undo" title="復原 Ctrl+Z">↶</button><button id="redo" title="重做 Ctrl+Shift+Z">↷</button><i></i><button id="grid" class="${isGrid ? "toggle-on" : ""}" title="切換格線">▦</button><button id="onion" class="${isOnion ? "toggle-on" : ""}" title="洋蔥皮：顯示前一格">◉</button><i></i><button id="zoom-out" title="縮小">−</button><button id="zoom-reset" class="zoom-value">${Math.round(iZoom * 100)}%</button><button id="zoom-in" title="放大">＋</button></div></div><div id="canvas-area"><div class="canvas-caption">${project.width} × ${project.height} px · 透明背景</div><div id="canvas-holder"><canvas id="reference-canvas"></canvas><canvas id="onion-canvas"></canvas><canvas id="drawing-canvas" aria-label="像素繪圖畫布"></canvas><div id="grid-overlay"></div><div id="pivot-marker" title="對齊基準點">＋</div></div><div class="canvas-tip">${icons[strTool]} ${({ pencil: "鉛筆工具", eraser: "橡皮擦工具", fill: "填色工具", picker: "滴管工具", move: "平移工具" } as Record<string, string>)[strTool]}<span>滾輪縮放 · 雙指縮放</span></div></div><div class="timeline"><div class="timeline-heading"><div><strong>影格時間軸</strong><span id="frame-count">${action().frames.length} 格</span></div><div class="timeline-actions"><button id="duplicate-frame" title="複製目前影格">▣ 複製</button><button id="delete-frame" title="刪除目前影格">⌫</button><button id="add-frame" class="soft-button">＋ 新增影格</button></div></div><div class="timeline-bottom"><button id="play" class="play-button" aria-label="播放動畫">${isPlaying ? "Ⅱ" : "▶"}</button><div id="frames"></div><div class="timeline-fps"><label for="fps">速度</label><div><input id="fps" type="number" min="1" max="30" value="${action().fps}"><span>FPS</span></div></div></div></div></section>
-    <aside class="right-panel"><div class="section-label">動畫預覽 </div><div class="preview-box"><canvas id="preview-canvas"></canvas><span>${isPlaying ? "播放中" : "即時預覽"}</span></div><div class="preview-options"><label><input id="loop" type="checkbox" ${action().loop ? "checked" : ""}> 匯出循環</label><span>1× 原始比例</span></div><div class="divider"></div><div class="section-label">動作列表 <button id="add-action" title="新增動作">＋</button></div><div class="action-list">${project.actions.map((item, i) => `<button data-action="${i}" class="action-item ${i === iAction ? "selected" : ""}"><span class="action-symbol">${i === 0 ? "↔" : "◇"}</span><span><strong>${escape(item.name)}</strong><small>${item.frames.length} 格影格 · ${item.fps} FPS</small></span><span class="action-arrow">${i === iAction ? "●" : "›"}</span></button>`).join("")}</div><div class="action-management"><button id="rename-action">重新命名</button><button id="delete-action">刪除動作</button></div><div class="divider"></div><div class="section-label">畫布設定</div><div class="setting-row"><span>畫布尺寸</span><button id="resize">${project.width} × ${project.height} ↗</button></div><div class="setting-row"><span>對齊基準</span><button id="alignment">${project.pivot.x}, ${project.pivot.y} ⌖</button></div><div class="setting-row"><span>背景</span><span class="muted">透明</span></div><button id="templates" class="template-card"><span>＋</span><strong>新增作品<small>選擇空白畫布尺寸</small></strong></button><button id="versions" class="version-link">◷ 版本紀錄與快照</button></aside></main><footer><span><i class="status-dot"></i> 自動儲存於此瀏覽器</span><span>${project.width} × ${project.height} px <b>·</b> ${project.actions.length} 個動作 <b>·</b> ${action().frames.length} 格影格</span></footer><div id="toast" role="status"></div><dialog id="modal"></dialog>`;
+    <section class="workspace"><div class="canvas-toolbar"><div class="canvas-title"><span class="status-dot"></span><strong>${escape(action().name)}</strong><span class="muted">/ 第 ${iFrame + 1} 格</span></div><div class="canvas-controls"><button id="undo" title="復原 Ctrl+Z">↶</button><button id="redo" title="重做 Ctrl+Shift+Z">↷</button><i></i><button id="grid" class="${isGrid ? "toggle-on" : ""}" title="切換格線">▦</button><button id="onion" class="${isOnion ? "toggle-on" : ""}" title="洋蔥皮：顯示前一格">◉</button><i></i><button id="zoom-out" title="縮小">−</button><button id="zoom-reset" class="zoom-value">${Math.round(iZoom * 100)}%</button><button id="zoom-in" title="放大">＋</button></div></div><div id="canvas-area"><div class="canvas-caption">${project.width} × ${project.height} px · 透明背景</div><div id="canvas-holder"><canvas id="reference-canvas"></canvas><canvas id="onion-canvas"></canvas><canvas id="drawing-canvas" aria-label="像素繪圖畫布"></canvas><div id="grid-overlay"></div><div id="pivot-marker" title="對齊基準點">＋</div></div><div class="canvas-tip">${icons[strTool]} ${({ pencil: "鉛筆工具", eraser: "橡皮擦工具", fill: "填色工具", picker: "滴管工具", move: "平移工具" } as Record<string, string>)[strTool]}<span>滾輪縮放 · 雙指縮放</span></div></div><div class="timeline"><div class="timeline-heading"><div><strong>時間軸</strong><span id="frame-count">${action().frames.length} 格</span></div><div class="timeline-actions"><button id="duplicate-frame" title="複製目前影格">▣ 複製</button><button id="delete-frame" title="刪除目前影格">⌫</button><button id="add-frame" class="soft-button">＋ 新增影格</button></div></div><div class="timeline-bottom"><button id="play" class="play-button" aria-label="播放動畫">${isPlaying ? "Ⅱ" : "▶"}</button><div id="frames"></div><div class="timeline-fps"><label for="fps">速度</label><div><input id="fps" type="number" min="1" max="30" value="${action().fps}"><span>FPS</span></div></div></div></div></section>
+    <aside class="right-panel"><div class="section-label">動畫預覽 </div><div class="preview-box"><canvas id="preview-canvas"></canvas><span>${isPlaying ? "播放中" : "即時預覽"}</span></div><div class="preview-options"><label><input id="loop" type="checkbox" ${action().loop ? "checked" : ""}> 匯出循環</label><span>1× 原始比例</span></div><div class="divider"></div><div class="section-label">動作列表 <button id="add-action" title="新增動作">＋</button></div><div class="action-list">${project.actions.map((item, i) => `<button data-action="${i}" class="action-item ${i === iAction ? "selected" : ""}"><span class="action-symbol">${i === 0 ? "↔" : "◇"}</span><span><strong>${escape(item.name)}</strong><small>${item.frames.length} 格影格 · ${item.fps} FPS</small></span><span class="action-arrow">${i === iAction ? "●" : "›"}</span></button>`).join("")}</div><div class="action-management"><button id="rename-action">重新命名</button><button id="delete-action">刪除動作</button></div><div class="divider"></div><div class="section-label">畫布設定</div><div class="setting-row"><span>畫布尺寸</span><button id="resize">${project.width} × ${project.height} ↗</button></div><div class="setting-row"><span>對齊基準</span><button id="alignment">${project.pivot.x}, ${project.pivot.y} ⌖</button></div><div class="setting-row"><span>背景</span><span class="muted">透明</span></div><button id="templates" class="template-card"><span>＋</span><strong>新增空白作品</strong></button><button id="versions" class="version-link">◷ 版本紀錄與快照</button></aside></main><footer><span><i class="status-dot"></i> 自動儲存於此瀏覽器</span><span>${project.width} × ${project.height} px <b>·</b> ${project.actions.length} 個動作 <b>·</b> ${action().frames.length} 格影格</span></footer><div id="toast" role="status"></div><dialog id="modal"></dialog>`;
   mountColorPanel(
     document.querySelector<HTMLElement>("#color-panel")!,
     strColor,
@@ -217,6 +223,7 @@ function render() {
   );
   bind();
   bindEditorInteractions();
+  positionTimeline();
   if (isPlaying) play();
   renderCanvases();
   renderTimeline();
@@ -225,6 +232,22 @@ function render() {
   const rightPanel = document.querySelector(".right-panel")!;
   previewDock.append(...Array.from(rightPanel.children).slice(0, 3));
   rightPanel.prepend(previewDock);
+  const addAction = document.querySelector<HTMLButtonElement>("#add-action")!;
+  addAction.textContent = "＋ 新增動作";
+  document.querySelector(".action-list")!.after(addAction);
+  const toolbarResize = document.createElement("button");
+  toolbarResize.className = "canvas-size";
+  toolbarResize.textContent = `${project.width} × ${project.height} ⌄`;
+  toolbarResize.setAttribute("aria-label", "調整畫布尺寸");
+  toolbarResize.onclick = () => openResizeDialog(project, applyCurrentProject);
+  document.querySelector(".canvas-controls")!.before(toolbarResize);
+  const headerHelp = document.createElement("button");
+  headerHelp.className = "header-help";
+  headerHelp.textContent = "？";
+  headerHelp.setAttribute("aria-label", "操作說明");
+  headerHelp.onclick = () =>
+    (document.querySelector("#help") as HTMLButtonElement).click();
+  document.querySelector(".header-actions")!.prepend(headerHelp);
   const timelineActions = document.querySelector(".timeline-actions")!;
   const rotateButton = document.createElement("button");
   rotateButton.className = "primary";
@@ -355,7 +378,13 @@ function renderCanvases() {
   preview.classList.toggle("original-size", isOriginalPreview);
   const previewScale = isOriginalPreview
     ? 1
-    : 110 / Math.max(project.width, project.height);
+    : Math.max(
+        50,
+        Math.min(
+          document.querySelector(".preview-box")!.clientWidth - 32,
+          document.querySelector(".preview-box")!.clientHeight - 36,
+        ),
+      ) / Math.max(project.width, project.height);
   preview.style.width = `${project.width * previewScale}px`;
   preview.style.height = `${project.height * previewScale}px`;
   document.querySelector(".zoom-value")!.textContent =
@@ -1098,7 +1127,7 @@ async function gallery() {
   );
   const dialog = modal(
     "我的點陣圖",
-    `<div class="start-choices"><button id="gallery-upload"><span class="start-choice-icon">↥</span><strong>上傳圖片</strong><small>單張圖片或精靈圖集</small></button><button id="gallery-new"><span class="start-choice-icon">✎</span><strong>自由繪畫</strong><small>從空白畫布開始</small></button></div><div class="start-drop-zone">拖曳圖片到這裡上傳</div><button id="gallery-import" class="start-project-import">匯入專案 JSON</button><input id="start-files" type="file" accept="image/png,image/webp,image/jpeg" multiple hidden>${entries.length ? '<h3 class="recent-title">我的作品</h3>' : ""}<div class="gallery-grid">${entries.map((entry, i) => `<div class="gallery-item"><button data-open="${i}"><canvas></canvas><strong>${escape(entry.project.name)}</strong><small>${entry.project.width} × ${entry.project.height} · ${new Date(entry.savedAt).toLocaleDateString("zh-TW")}</small></button><div class="gallery-action-thumbs">${entry.project.actions.map((item: any, j: number) => `<span><canvas data-thumb="${i}-${j}"></canvas><small>${escape(item.name)}</small></span>`).join("")}</div><button data-remove="${i}" class="gallery-delete" aria-label="刪除作品 ${escape(entry.project.name)}">${TRASH_ICON}<span>刪除</span></button></div>`).join("")}</div>`,
+    `<div class="start-choices"><button id="gallery-upload"><span class="start-card-drop">${UPLOAD_ART}<span>將圖片拖放到這裡</span></span><strong>↥ 上傳圖片</strong></button><button id="gallery-new"><span class="start-card-drawing">${DRAW_ART}</span><strong>✎ 自由繪畫</strong></button></div><button id="gallery-import" class="start-project-import">匯入專案 JSON</button><input id="start-files" type="file" accept="image/png,image/webp,image/jpeg" multiple hidden>${entries.length ? '<h3 class="recent-title">我的作品</h3>' : ""}<div class="gallery-grid">${entries.map((entry, i) => `<div class="gallery-item"><button data-open="${i}"><canvas></canvas><strong>${escape(entry.project.name)}</strong><small>${entry.project.width} × ${entry.project.height} · ${new Date(entry.savedAt).toLocaleDateString("zh-TW")}</small></button><div class="gallery-action-thumbs">${entry.project.actions.map((item: any, j: number) => `<span><canvas data-thumb="${i}-${j}"></canvas><small>${escape(item.name)}</small></span>`).join("")}</div><button data-remove="${i}" class="gallery-delete" aria-label="刪除作品 ${escape(entry.project.name)}">${TRASH_ICON}<span>刪除</span></button></div>`).join("")}</div>`,
   );
   dialog.className = "home-dialog";
   const title = dialog.querySelector("h2")!;
@@ -1359,11 +1388,23 @@ document.addEventListener("keyup", (event) => {
   }
 });
 render();
+function positionTimeline() {
+  const timeline = document.querySelector(".timeline");
+  if (!timeline) return;
+  if (window.innerHeight <= 650)
+    document.querySelector(".workspace")!.append(timeline);
+  else
+    document
+      .querySelector("#app")!
+      .insertBefore(timeline, document.querySelector("#app>footer"));
+}
 function fitCanvas() {
+  positionTimeline();
   const area = document.querySelector<HTMLDivElement>("#canvas-area");
   if (
     window.matchMedia("(orientation:portrait) and (max-width:1100px)").matches
   ) {
+    if (document.querySelector(".home-dialog[open]")) isHomePending = true;
     document
       .querySelectorAll<HTMLDialogElement>("dialog[open]")
       .forEach((dialog) => dialog.close());
@@ -1378,7 +1419,8 @@ function fitCanvas() {
       Math.floor(
         Math.min(
           (area.clientWidth - 56) / project.width,
-          (area.clientHeight - 56) / project.height,
+          (area.clientHeight - (window.innerHeight <= 650 ? 40 : 56)) /
+            project.height,
         ),
       ),
     ),

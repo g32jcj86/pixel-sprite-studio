@@ -1,5 +1,5 @@
 #color-panel {
-  border-top: 1px solid var(--line, #e5e9f0);
+  border-top: 1px solid var(--line, #d7d7d7);
   padding-top: 18px;
   margin-top: 19px;
 }
@@ -11,7 +11,7 @@
 .color-current input[type="color"] {
   appearance: none;
   padding: 0;
-  border: 1px solid #dfe6f0;
+  border: 1px solid #aaaaaa;
   background: none;
   width: 34px;
   height: 34px;
@@ -34,14 +34,14 @@
   font-family: ui-monospace, monospace;
   font-size: 12px;
   padding: 7px 4px;
-  border: 1px solid #e2e8f2;
+  border: 1px solid #aaaaaa;
   border-radius: 5px;
-  background: #f9fbff;
+  background: #ffffff;
 }
 #favorite-current {
   width: 30px;
   height: 34px;
-  color: #718ac5;
+  color: #d94d00;
   font-size: 21px;
   flex-shrink: 0;
 }
@@ -52,8 +52,8 @@
   gap: 8px;
   padding: 10px;
   margin-top: 12px;
-  border: 1px solid #dce5fa;
-  background: #f5f8ff;
+  border: 1px solid #ff6200;
+  background: #fff8f2;
   min-height: 42px;
 }
 .color-library-button strong {
@@ -62,7 +62,7 @@
 }
 .color-library-button > span:last-child {
   margin-left: auto;
-  color: #8296be;
+  color: #b34400;
   font-size: 21px;
 }
 .mini-spectrum {
@@ -82,7 +82,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 10px;
-  color: #8999b2;
+  color: #626262;
   margin: 16px 0 8px;
 }
 .project-color-chips {
@@ -91,7 +91,7 @@
   gap: 5px;
 }
 .color-chip {
-  border: 1px solid #253c6620;
+  border: 1px solid #17191d33;
   border-radius: 4px;
   position: relative;
   min-width: 0;
@@ -101,13 +101,13 @@
 .color-chip:hover {
   transform: scale(1.1);
   z-index: 1;
-  outline: 2px solid #9cb4ec;
+  outline: 2px solid #ff6200;
   outline-offset: 1px;
 }
 .color-chip.is-selected {
   box-shadow:
     inset 0 0 0 2px #fff,
-    0 0 0 2px #557ce4;
+    0 0 0 2px #ff6200;
   z-index: 1;
 }
 .favorites-link {
@@ -115,7 +115,7 @@
   justify-content: space-between;
   width: 100%;
   font-size: 11px;
-  color: #7f94bc;
+  color: #626262;
   padding: 12px 1px 0;
   text-align: left;
 }
@@ -139,7 +139,7 @@
 .color-library .modal-heading p {
   margin: 8px 0 0;
   font-size: 12px;
-  color: #8394b0;
+  color: #626262;
 }
 .color-library-toolbar {
   display: flex;
@@ -151,7 +151,7 @@
 .color-tabs {
   display: flex;
   gap: 3px;
-  background: #f1f4fa;
+  background: #f0f0f0;
   padding: 3px;
   border-radius: 7px;
   flex-shrink: 0;
@@ -162,14 +162,14 @@
 }
 .color-tabs button.active {
   background: #fff;
-  color: #4e75d4;
-  box-shadow: 0 1px 4px #314b7920;
+  color: #b34400;
+  box-shadow: 0 1px 4px #17191d20;
 }
 .color-search {
   display: flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid #dfe6f2;
+  border: 1px solid #aaaaaa;
   background: #fff;
   border-radius: 7px;
   padding: 0 8px;
@@ -177,7 +177,7 @@
   flex: 1;
   max-width: 360px;
   height: 37px;
-  color: #91a0b9;
+  color: #626262;
 }
 .color-search input {
   border: 0;
@@ -193,14 +193,14 @@
 .color-search > button {
   font-size: 18px;
   padding: 0 2px;
-  color: #8fa0bd;
+  color: #626262;
 }
 .color-family-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
   padding: 0 24px 15px;
-  border-bottom: 1px solid #e5ebf5;
+  border-bottom: 1px solid #d7d7d7;
 }
 .color-family-tabs[hidden] {
   display: none;
@@ -208,18 +208,18 @@
 .color-family-tabs button {
   padding: 5px 9px;
   font-size: 11px;
-  color: #7b8ca8;
+  color: #626262;
 }
 .color-family-tabs button.active {
-  background: #eaf0ff;
-  color: #4c71cf;
+  background: #fff1e7;
+  color: #b34400;
 }
 .color-library-content {
   max-height: 49dvh;
   overflow: auto;
   padding: 17px 24px;
   scrollbar-width: thin;
-  scrollbar-color: #cfdaed transparent;
+  scrollbar-color: #aaaaaa transparent;
 }
 .color-ramp {
   display: grid;
@@ -229,7 +229,7 @@
   margin-bottom: 8px;
 }
 .color-ramp > span {
-  color: #8193b1;
+  color: #626262;
   font-size: 11px;
 }
 .color-ramp-swatches {
@@ -242,13 +242,13 @@
   min-height: 27px;
 }
 .color-library-footer {
-  border-top: 1px solid #e2e9f5;
+  border-top: 1px solid #d7d7d7;
   padding: 14px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: #fbfcff;
+  background: #fafafa;
 }
 .color-library-footer > div {
   display: flex;
@@ -259,7 +259,7 @@
   display: block;
   width: 28px;
   height: 28px;
-  border: 1px solid #cdd8ea;
+  border: 1px solid #aaaaaa;
   border-radius: 5px;
 }
 #library-hex {
@@ -269,18 +269,18 @@
 }
 #library-favorite {
   font-size: 12px;
-  color: #6e85b5;
+  color: #b34400;
   padding: 7px;
 }
 #color-result-count {
   font-size: 11px;
-  color: #8a9ab7;
+  color: #626262;
 }
 .color-library-footer > button {
   padding: 9px 22px;
 }
 .color-empty {
-  color: #8c9bb5;
+  color: #626262;
   font-size: 13px;
   line-height: 1.9;
   text-align: center;
@@ -424,15 +424,15 @@
   gap: 12px;
   padding: 12px 18px;
   margin: 0 auto 20px;
-  background: #edf3ff;
-  border: 1px solid #d9e5fc;
+  background: #fff1e7;
+  border: 1px solid #ff6200;
   font-size: 13px;
-  color: #6687c7;
+  color: #b34400;
 }
 .custom-search-color > span {
   width: 28px;
   height: 28px;
-  border: 1px solid #bccce7;
+  border: 1px solid #aaaaaa;
   border-radius: 4px;
 }
 @media (max-height: 650px) and (orientation: landscape) {
@@ -455,4 +455,81 @@
   .color-library .color-family-tabs {
     display: flex;
   }
+}
+.color-library {
+  border: 2px solid #ff6200;
+  color: #17191d;
+  border-radius: 12px;
+  box-shadow: 0 20px 70px #17191d24;
+}
+.color-library::backdrop {
+  background: #17191d66;
+}
+.color-library .modal-heading h2 {
+  color: #17191d;
+  font-weight: 750;
+}
+.color-library .modal-heading [data-close] {
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid #888;
+  border-radius: 6px;
+  color: #17191d;
+  background: #fff;
+  font-size: 24px;
+}
+.color-library .color-tabs button.active {
+  color: #17191d;
+  background: #fff1e7;
+  box-shadow: inset 0 0 0 1px #ff6200;
+}
+.color-family-tabs button.active {
+  color: #17191d;
+  background: #fff1e7;
+}
+.color-search:focus-within {
+  border-color: #ff6200;
+  outline: 2px solid #ff620033;
+}
+.color-library :focus-visible {
+  outline: 2px solid #ff6200;
+  outline-offset: 3px;
+}
+.color-library-footer > .primary {
+  background: #ff6200;
+  color: #fff;
+  border: 1px solid #ff6200;
+  min-height: 40px;
+  font-weight: 700;
+}
+.color-library-footer > .primary:hover {
+  background: #e95700;
+}
+.color-library-button:hover {
+  background: #fff1e7;
+}
+.color-library {
+  --accent: #ff6200;
+  --accent-dark: #e95700;
+}
+.color-library[open] {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: min(880px, 92dvh);
+}
+.color-library > .modal-heading,
+.color-library-toolbar,
+.color-library .color-family-tabs,
+.color-library-footer {
+  flex-shrink: 0;
+}
+.color-library .color-library-content {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+}
+.color-library .color-library-footer {
+  background: #fafafa;
 }

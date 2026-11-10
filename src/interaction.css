@@ -3,11 +3,11 @@
   position: absolute;
   pointer-events: none;
   z-index: 8;
-  border: 1px solid #17243f;
+  border: 1px solid #17191d;
   box-shadow:
     inset 0 0 0 1px #fff,
     0 0 0 1px #fff;
-  background: #6d8bd226;
+  background: #ff620026;
 }
 .pixel-hover[hidden] {
   display: none;
@@ -26,20 +26,22 @@
     SFMono-Regular,
     Consolas,
     monospace;
-  color: #526481;
+  color: #272727;
   background: #ffffffdd;
   padding: 6px 9px;
-  border: 1px solid #dce3ed;
+  border: 1px solid #a5a5a5;
   border-radius: 5px;
   pointer-events: none;
 }
 .compact-tool-picker {
+  --accent: #ff6200;
+  --accent-dark: #e95700;
   position: absolute;
   left: 15px;
   bottom: 14px;
   z-index: 15;
   font-size: 11px;
-  color: #526481;
+  color: #272727;
 }
 .compact-tool-picker summary {
   min-height: 36px;
@@ -48,9 +50,9 @@
   align-items: center;
   list-style: none;
   cursor: pointer;
-  background: #fffefc;
-  border: 1px solid #d4ddeb;
-  box-shadow: 0 3px 12px #3d517111;
+  background: #ffffff;
+  border: 1px solid #777777;
+  box-shadow: 0 3px 12px #17191d11;
   border-radius: 6px;
   padding: 8px 11px;
   user-select: none;
@@ -69,10 +71,10 @@
   max-height: min(430px, 65vh);
   overflow: auto;
   background: white;
-  border: 1px solid #d4ddeb;
+  border: 1px solid #777777;
   border-radius: 8px 8px 8px 0;
   padding: 12px;
-  box-shadow: 0 -5px 30px #30456b14;
+  box-shadow: 0 -5px 30px #17191d1a;
 }
 .compact-tool-buttons {
   display: flex;
@@ -80,11 +82,11 @@
 }
 .compact-tool-picker button {
   min-height: 44px;
-  border: 1px solid #e1e6ef;
+  border: 1px solid #a5a5a5;
   border-radius: 5px;
-  background: #f8f9fc;
+  background: #ffffff;
   padding: 6px;
-  color: #526481;
+  color: #272727;
 }
 .compact-tool-buttons button {
   flex: 1;
@@ -93,12 +95,12 @@
 .compact-tool-buttons small {
   display: block;
   font-size: 8px;
-  color: #8b96a9;
+  color: #626262;
 }
 .compact-tool-buttons button.is-selected {
-  background: #e8efff;
-  border-color: #7c98d8;
-  color: #476fbd;
+  background: #fff1e7;
+  border-color: #ff6200;
+  color: #b34400;
 }
 .compact-brush-row {
   display: flex;
@@ -133,7 +135,7 @@ kbd {
     9px ui-monospace,
     Consolas,
     monospace;
-  background: #eef2f8;
+  background: #f0f0f0;
   padding: 3px 5px;
   border-radius: 3px;
   white-space: nowrap;
@@ -168,4 +170,9 @@ kbd {
     font-size: 8px;
     padding: 4px 6px;
   }
+}
+
+.compact-tool-picker button:hover {
+  background: #fff1e7;
+  border-color: #ff6200;
 }
