@@ -183,3 +183,103 @@
     gap: 12px;
   }
 }
+.asset-grouping {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid #dce2ec;
+  border-radius: 8px;
+  background: #f7f9fd;
+}
+.asset-grouping [hidden] {
+  display: none !important;
+}
+.asset-grouping textarea {
+  display: block;
+  width: 100%;
+  min-width: 260px;
+  padding: 10px;
+  border: 1px solid #ccd5e4;
+  border-radius: 6px;
+  resize: vertical;
+  font: inherit;
+  background: white;
+  color: #35425a;
+}
+.asset-grouping #custom-groups-label {
+  display: block;
+}
+.asset-grouping #row-groups label {
+  display: flex;
+}
+.asset-grouping #group-error {
+  color: #b34545;
+  margin: 4px 0;
+  min-height: 18px;
+}
+.asset-cell {
+  display: grid !important;
+  grid-template-columns: auto 1fr;
+  gap: 5px !important;
+  margin: 0 !important;
+  padding: 6px;
+  border: 1px solid #dce2ec;
+  border-radius: 7px;
+  max-width: 128px;
+  background: white;
+}
+.asset-cell canvas {
+  grid-column: 1/-1;
+}
+.asset-cell span {
+  grid-column: 1/-1;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.asset-cell.is-skipped {
+  opacity: 0.48;
+}
+.asset-dialog {
+  background: #ffffff;
+  color: #34425a;
+  border-color: #dce2ec;
+}
+.asset-dialog p {
+  color: #758096;
+}
+.asset-dialog input,
+.asset-dialog select {
+  background: #fff;
+  color: #34425a;
+  border-color: #d3dbe8;
+}
+.asset-dialog button {
+  background: #f0f3f9;
+  color: #4e607f;
+  border-color: #d9e0ec;
+}
+.asset-dialog button.primary {
+  background: #6d8bd2;
+  color: white;
+  border-color: #6d8bd2;
+}
+.asset-dialog button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.asset-preview,
+.asset-thumb {
+  background-color: #f4f5f8;
+  background-image:
+    linear-gradient(45deg, #e5e8ee 25%, transparent 25%),
+    linear-gradient(-45deg, #e5e8ee 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e5e8ee 75%),
+    linear-gradient(-45deg, transparent 75%, #e5e8ee 75%);
+  border-color: #ccd5e4;
+}
+
+.asset-dialog #source-preview {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 224px;
+}

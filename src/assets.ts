@@ -139,7 +139,7 @@ export function openPaletteDialog(project: AssetProject, onApply: Apply) {
   let next = structuredClone(project);
   const element = dialog(
     "整個角色統一減色",
-    '<p>統計所有動作與影格，共用同一組色票，透明像素維持透明。</p><label>目標色數 <select id="colors"><option>8</option><option selected>16</option><option>32</option></select></label><div class="asset-compare"><div>原始<canvas class="asset-preview" data-before></canvas></div><div>減色預覽<canvas class="asset-preview" data-after></canvas></div></div><div class="asset-swatches"></div><p data-info></p>',
+    '<p>統計所有動作與影格，共用同一組色票，透明像素維持透明。</p><label>目標色數 <select id="colors"><option>8</option><option selected>16</option><option>32</option><option>64</option><option>128</option><option>256</option></select></label><div class="asset-compare"><div>原始<canvas class="asset-preview" data-before></canvas></div><div>減色預覽<canvas class="asset-preview" data-after></canvas></div></div><div class="asset-swatches"></div><p data-info></p>',
     () => {
       onApply(next);
       element.close();
@@ -161,40 +161,39 @@ export function openPaletteDialog(project: AssetProject, onApply: Apply) {
     const colors = [...counts.keys()].sort(
       (strA, strB) => counts.get(strB)! - counts.get(strA)!,
     );
-    const rgb = (strColor: string) =>
-      [1, 3, 5].map((i) => parseInt(strColor.slice(i, i + 2), 16));
-    const palette = colors.slice(0, 1);
-    while (palette.length < Math.min(iLimit, colors.length)) {
-      const remaining = colors.filter(
-        (strColor) => !palette.includes(strColor),
-      );
-      remaining.sort((strA, strB) => {
-        const score = (strColor: string) =>
-          Math.min(
-            ...palette.map((strOther) =>
-              rgb(strColor).reduce(
-                (nSum, nChannel, i) =>
-                  nSum + (nChannel - rgb(strOther)[i]) ** 2,
-                0,
-              ),
-            ),
-          ) * Math.sqrt(counts.get(strColor)!);
-        return score(strB) - score(strA);
-      });
-      palette.push(remaining[0]);
+    const channels = colors.map((strColor) =>
+      [1, 3, 5].map((i) => parseInt(strColor.slice(i, i + 2), 16)),
+    );
+    const weights = colors.map((strColor) => Math.sqrt(counts.get(strColor)!));
+    const distances = new Float64Array(colors.length).fill(Infinity);
+    const winners = new Uint32Array(colors.length);
+    const palette: string[] = [];
+    let iSelected = 0;
+    for (let i = 0; i < Math.min(iLimit, colors.length); i++) {
+      palette.push(colors[iSelected]);
+      const selected = channels[iSelected];
+      let nBestScore = -1,
+        iNext = 0;
+      for (let j = 0; j < colors.length; j++) {
+        const channel = channels[j];
+        const nDistance =
+          (channel[0] - selected[0]) ** 2 +
+          (channel[1] - selected[1]) ** 2 +
+          (channel[2] - selected[2]) ** 2;
+        if (nDistance < distances[j]) {
+          distances[j] = nDistance;
+          winners[j] = i;
+        }
+        const nScore = distances[j] * weights[j];
+        if (nScore > nBestScore) {
+          nBestScore = nScore;
+          iNext = j;
+        }
+      }
+      iSelected = iNext;
     }
     const mapping = new Map(
-      colors.map((strColor) => [
-        strColor,
-        [...palette].sort((strA, strB) => {
-          const distance = (strOther: string) =>
-            rgb(strColor).reduce(
-              (nSum, nChannel, i) => nSum + (nChannel - rgb(strOther)[i]) ** 2,
-              0,
-            );
-          return distance(strA) - distance(strB);
-        })[0],
-      ]),
+      colors.map((strColor, i) => [strColor, palette[winners[i]]]),
     );
     next = structuredClone(project);
     next.palette = palette;
@@ -349,18 +348,50 @@ export function openImportDialog(
 ) {
   const sources: { name: string; image: HTMLImageElement }[] = [];
   let imported: string[][] = [];
+  let cellRows: string[] = [];
+  const skipped = new Set<number>();
+  const rowNames = new Map<string, string>();
   let background: number[] | null = null;
   const element = dialog(
     "匯入圖片與 Sprite Sheet",
-    `<p>多張圖片會使用相同縮放比例。可先移除連通背景，再以最近鄰取樣保留像素邊緣。</p><input id="files" type="file" accept="image/*" multiple><div data-files></div><canvas id="source-preview" class="asset-preview" title="點選背景顏色"></canvas><p>點選原圖選取背景色；只移除與圖片外緣連通的同色區域。</p><div class="asset-fields"><label>切割方式 <select id="layout"><option value="cell">指定每格尺寸</option><option value="count">指定欄數與列數</option></select></label><label>欄數 <input id="cols" type="number" min="1" value="1"></label><label>列數 <input id="rows" type="number" min="1" value="1"></label><label>切格預設 <select id="preset"><option value="">自訂</option><option>16</option><option>32</option><option>48</option><option>64</option><option>128</option><option>256</option></select></label><label>切格寬 <input id="cw" type="number" min="1" value="${project.width}"></label><label>切格高 <input id="ch" type="number" min="1" value="${project.height}"></label><label>起點 X <input id="ox" type="number" min="0" value="0"></label><label>起點 Y <input id="oy" type="number" min="0" value="0"></label><label>水平間距 <input id="gx" type="number" min="0" value="0"></label><label>垂直間距 <input id="gy" type="number" min="0" value="0"></label><label>共用縮放倍率 <input id="scale" type="number" min="0.01" max="16" step="0.1" value="1"></label><label><input id="sheet" type="checkbox">依格線切割</label><label><input id="remove" type="checkbox">移除外緣連通背景</label><label>加入為 <select id="target"><option value="pixels">可編輯像素</option><option value="reference">參考底圖</option></select></label></div><div class="asset-import-previews"></div><p data-info></p>`,
+    `<p>多張圖片會使用相同縮放比例。可先移除連通背景，再以最近鄰取樣保留像素邊緣。</p><input id="files" type="file" accept="image/*" multiple><div data-files></div><canvas id="source-preview" class="asset-preview" title="點選背景顏色"></canvas><p>點選原圖選取背景色；只移除與圖片外緣連通的同色區域。</p><div class="asset-fields"><label>切割方式 <select id="layout"><option value="cell">指定每格尺寸</option><option value="count">指定欄數與列數</option></select></label><label>欄數 <input id="cols" type="number" min="1" value="1"></label><label>列數 <input id="rows" type="number" min="1" value="1"></label><label>切格預設 <select id="preset"><option value="">自訂</option><option>16</option><option>32</option><option>48</option><option>64</option><option>128</option><option>256</option></select></label><label>切格寬 <input id="cw" type="number" min="1" value="${project.width}"></label><label>切格高 <input id="ch" type="number" min="1" value="${project.height}"></label><label>起點 X <input id="ox" type="number" min="0" value="0"></label><label>起點 Y <input id="oy" type="number" min="0" value="0"></label><label>水平間距 <input id="gx" type="number" min="0" value="0"></label><label>垂直間距 <input id="gy" type="number" min="0" value="0"></label><label>共用縮放倍率 <input id="scale" type="number" min="0.01" max="16" step="0.1" value="1"></label><label><input id="sheet" type="checkbox">依格線切割</label><label><input id="remove" type="checkbox">移除外緣連通背景</label><label>加入為 <select id="target"><option value="pixels">可編輯像素</option><option value="reference">參考底圖</option></select></label></div><div class="asset-grouping"><label>動作分組 <select id="group-mode"><option value="append">加入目前動作（預設）</option><option value="rows">每一列建立一個新動作</option><option value="custom">自訂影格範圍建立新動作</option></select></label><div id="row-groups"></div><label id="custom-groups-label" hidden>每行一個動作：名稱:影格範圍<textarea id="custom-groups" rows="4" placeholder="待機:1-4
+行走:5-8
+跳躍:9,11-12"></textarea></label><p>下方影格由 1 起編號，取消勾選可跳過空白或不需要的格子。自訂範圍未列出的影格不會匯入。</p><p id="group-error" role="alert"></p></div><div class="asset-import-previews"></div><p data-info></p>`,
     () => {
-      if (!imported.length) return;
+      const groups = getGroups();
+      if (!groups || !groups.length) return;
       const next = structuredClone(project);
       const isReference =
         (element.querySelector("#target") as HTMLSelectElement).value ===
         "reference";
-      if (isReference) {
-        imported.forEach((pixels, i) => {
+      const strGroupMode = (
+        element.querySelector("#group-mode") as HTMLSelectElement
+      ).value;
+      if (strGroupMode !== "append") {
+        const names = new Set(next.actions.map((action) => action.name));
+        groups.forEach((group) => {
+          let strName = group.name,
+            iSuffix = 2;
+          while (names.has(strName))
+            strName = group.name + " (" + iSuffix++ + ")";
+          names.add(strName);
+          next.actions.push({
+            name: strName,
+            fps: 8,
+            loop: true,
+            frames: group.indexes.map((i) =>
+              isReference
+                ? {
+                    pixels: Array(project.width * project.height).fill(""),
+                    reference: imported[i],
+                  }
+                : { pixels: imported[i] },
+            ),
+          });
+        });
+      } else if (isReference) {
+        groups[0].indexes.forEach((iSource, i) => {
+          const pixels = imported[iSource];
           const target = next.actions[iAction].frames[iFrame + i];
           if (target) target.reference = pixels;
           else
@@ -373,13 +404,14 @@ export function openImportDialog(
         next.actions[iAction].frames.splice(
           iFrame + 1,
           0,
-          ...imported.map((pixels) => ({ pixels })),
+          ...groups[0].indexes.map((i) => ({ pixels: imported[i] })),
         );
       }
       next.palette = [
         ...new Set([
           ...next.palette,
-          ...imported
+          ...groups
+            .flatMap((group) => group.indexes.map((i) => imported[i]))
             .flat()
             .filter(Boolean)
             .map((strColor) => strColor.slice(0, 7)),
@@ -391,6 +423,9 @@ export function openImportDialog(
   );
   const update = () => {
     imported = [];
+    cellRows = [];
+    (element.querySelector("[data-apply]") as HTMLButtonElement).disabled =
+      true;
     const iCellWidth = numberValue(element, "cw"),
       iCellHeight = numberValue(element, "ch");
     const iOriginX = numberValue(element, "ox"),
@@ -412,7 +447,7 @@ export function openImportDialog(
     }
     const previews = element.querySelector(".asset-import-previews")!;
     previews.replaceChildren();
-    sources.forEach((source) => {
+    sources.forEach((source, iSource) => {
       const canvas = document.createElement("canvas");
       canvas.width = source.image.width;
       canvas.height = source.image.height;
@@ -498,11 +533,28 @@ export function openImportDialog(
                       .join("");
             },
           );
+          const iCell = imported.length;
+          const strRow = `${iSource}:${Math.floor((iY - iOriginY) / (iHeight + iGapY))}`;
+          cellRows.push(strRow);
           imported.push(pixels);
           const preview = document.createElement("canvas");
           preview.className = "asset-thumb";
           draw(preview, pixels, project.width, project.height);
-          previews.append(preview);
+          const card = document.createElement("label");
+          card.className = "asset-cell";
+          const check = document.createElement("input");
+          check.type = "checkbox";
+          check.checked = !skipped.has(iCell);
+          check.dataset.cell = String(iCell);
+          check.addEventListener("change", () => {
+            if (check.checked) skipped.delete(iCell);
+            else skipped.add(iCell);
+            refreshGrouping();
+          });
+          const caption = document.createElement("span");
+          caption.dataset.groupCaption = String(iCell);
+          card.append(check, preview, caption);
+          previews.append(card);
           if (!isSheet) break;
         }
         if (!isSheet) break;
@@ -510,7 +562,134 @@ export function openImportDialog(
     });
     element.querySelector("[data-info]")!.textContent =
       `${sources.length} 個來源 · ${imported.length} 格（最多 256 格）· 輸出 ${project.width} × ${project.height}`;
+    renderRowGroups();
+    refreshGrouping();
   };
+  function getGroups() {
+    const strMode = (element.querySelector("#group-mode") as HTMLSelectElement)
+      .value;
+    const error = element.querySelector("#group-error")!;
+    error.textContent = "";
+    const groups: { name: string; indexes: number[] }[] = [];
+    if (strMode === "append")
+      groups.push({
+        name: project.actions[iAction].name,
+        indexes: imported.map((_, i) => i).filter((i) => !skipped.has(i)),
+      });
+    if (strMode === "rows")
+      [...new Set(cellRows)].forEach((strRow, i) =>
+        groups.push({
+          name: rowNames.get(strRow)?.trim() || "動作 " + (i + 1),
+          indexes: cellRows.flatMap((strValue, j) =>
+            strValue === strRow && !skipped.has(j) ? [j] : [],
+          ),
+        }),
+      );
+    if (strMode === "custom") {
+      const lines = (
+        element.querySelector("#custom-groups") as HTMLTextAreaElement
+      ).value
+        .split("\n")
+        .filter((strLine) => strLine.trim());
+      const claimed = new Set<number>();
+      const names = new Set<string>();
+      for (const strLine of lines) {
+        const match = strLine.match(/^([^:：]+)[:：](.+)$/);
+        if (!match || !match[1].trim() || match[1].trim().length > 80) {
+          error.textContent = "請依「動作名稱:1-4,6」格式輸入，每行一個動作。";
+          return null;
+        }
+        const strName = match[1].trim();
+        if (names.has(strName)) {
+          error.textContent = "自訂動作名稱不可重複。";
+          return null;
+        }
+        names.add(strName);
+        const indexes: number[] = [];
+        for (const strPart of match[2].split(/[,，]/)) {
+          const range = strPart.trim().match(/^(\d+)(?:\s*-\s*(\d+))?$/);
+          if (!range) {
+            error.textContent = "影格範圍需為正整數，例如 1-4,6。";
+            return null;
+          }
+          const iStart = Number(range[1]),
+            iEnd = Number(range[2] || range[1]);
+          if (iStart < 1 || iEnd < iStart || iEnd > imported.length) {
+            error.textContent = "影格範圍超出預覽，或起點大於終點。";
+            return null;
+          }
+          for (let i = iStart - 1; i < iEnd; i++) {
+            if (claimed.has(i)) {
+              error.textContent = "同一影格不可重複分配給多個動作或範圍。";
+              return null;
+            }
+            claimed.add(i);
+            if (!skipped.has(i)) indexes.push(i);
+          }
+        }
+        if (indexes.length) groups.push({ name: strName, indexes });
+      }
+    }
+    const usedNames = new Set(project.actions.map((action) => action.name));
+    return groups
+      .filter((group) => group.indexes.length)
+      .map((group) => {
+        if (strMode === "append") return group;
+        const strBase = group.name;
+        let iSuffix = 2;
+        while (usedNames.has(group.name))
+          group.name = strBase + " (" + iSuffix++ + ")";
+        usedNames.add(group.name);
+        return group;
+      });
+  }
+  function renderRowGroups() {
+    const container = element.querySelector("#row-groups")!;
+    container.replaceChildren();
+    [...new Set(cellRows)].forEach((strRow, i) => {
+      const label = document.createElement("label");
+      label.textContent = "第 " + (i + 1) + " 列動作名稱 ";
+      const input = document.createElement("input");
+      input.value = rowNames.get(strRow) || "動作 " + (i + 1);
+      input.maxLength = 80;
+      input.dataset.rowName = strRow;
+      input.addEventListener("input", () => {
+        rowNames.set(strRow, input.value);
+        refreshGrouping();
+      });
+      label.append(input);
+      container.append(label);
+    });
+  }
+  function refreshGrouping() {
+    const strMode = (element.querySelector("#group-mode") as HTMLSelectElement)
+      .value;
+    (element.querySelector("#row-groups") as HTMLElement).hidden =
+      strMode !== "rows";
+    (element.querySelector("#custom-groups-label") as HTMLElement).hidden =
+      strMode !== "custom";
+    const groups = getGroups();
+    (element.querySelector("[data-apply]") as HTMLButtonElement).disabled =
+      !groups?.length;
+    element
+      .querySelectorAll<HTMLElement>("[data-group-caption]")
+      .forEach((caption) => {
+        const i = Number(caption.dataset.groupCaption);
+        const group = groups?.find((group) => group.indexes.includes(i));
+        caption.textContent =
+          "#" +
+          (i + 1) +
+          " · " +
+          (skipped.has(i) ? "略過" : group?.name || "未分組");
+        caption.parentElement!.classList.toggle("is-skipped", !group);
+      });
+  }
+  element
+    .querySelector("#group-mode")!
+    .addEventListener("change", refreshGrouping);
+  element
+    .querySelector("#custom-groups")!
+    .addEventListener("input", refreshGrouping);
   const fileList = () => {
     const list = element.querySelector("[data-files]")!;
     list.replaceChildren();
@@ -605,7 +784,9 @@ export function openImportDialog(
     update();
   });
   element
-    .querySelectorAll("input:not([type=file]), select")
+    .querySelectorAll(
+      "input:not([type=file]):not([data-cell]):not([data-row-name]), select:not(#group-mode)",
+    )
     .forEach((input) => input.addEventListener("input", update));
   update();
 }

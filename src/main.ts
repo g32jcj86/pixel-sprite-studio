@@ -1,4 +1,5 @@
 import "./style.css";
+import { mountColorPanel, updateColorSelection } from "./palette";
 import type { Project } from "./types";
 import {
   createSampleProject,
@@ -65,11 +66,14 @@ function createProjectId() {
 }
 let touchPixels: string[] | null = null;
 const icons: Record<string, string> = {
-  pencil: "✎",
-  eraser: "▱",
-  fill: "◈",
-  picker: "⌁",
-  move: "✥",
+  pencil:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0 0-3l-1-1a2 2 0 0 0-3 0L5 15z"/></svg>',
+  eraser:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 4 7 7a2 2 0 0 1 0 3l-6 6H8l-5-5a2 2 0 0 1 0-3l7-8a2 2 0 0 1 3 0ZM7 8l10 10M13 20h8"/></svg>',
+  fill: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 3 10 10-7 7-8-8 7-7M3 11h12M20 13s-3 4-3 6a3 3 0 0 0 6 0c0-2-3-6-3-6Z"/></svg>',
+  picker:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 3 6 6M17 7l-1-1-11 11-1 4 4-1L19 9l-1-1 3-3a2 2 0 0 0-3-3l-3 3"/></svg>',
+  move: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M2 12h20M8 6l4-4 4 4M8 18l4 4 4-4M6 8l-4 4 4 4M18 8l4 4-4 4"/></svg>',
 };
 const escape = (strValue: string) =>
   strValue.replace(
@@ -153,9 +157,9 @@ function paintCanvas(canvas: HTMLCanvasElement, pixels: string[], iScale = 1) {
   });
 }
 function render() {
-  root.innerHTML = `<div class="orientation-gate"><div class="rotate-icon">▯ ↻</div><h2>轉個方向，開始創作</h2><p>請將手機或平板轉為橫向，<br>讓畫布與工具擁有足夠空間。</p><span>點點工坊 / PIXEL SPRITE STUDIO</span></div>
-    <header><a class="brand" href="#"><span class="brand-icon">▦</span><span>點點工坊<small>PIXEL SPRITE STUDIO</small></span></a><div class="project-heading"><input id="project-name" aria-label="專案名稱" value="${escape(project.name)}"><span id="save-status">● 已自動儲存於此裝置</span></div><div class="header-actions"><button id="gallery">▦ <span>我的作品</span></button><button id="import">↥ <span>匯入</span></button><button class="primary" id="export">匯出作品 ↗</button></div></header>
-    <main><aside class="left-panel"><div class="section-label">繪圖工具 <span>TOOLS</span></div><div class="tools">${Object.entries(
+  root.innerHTML = `<div class="orientation-gate"><div class="rotate-icon">▯ ↻</div><h2>請將裝置轉為橫向</h2><p>請將手機或平板轉為橫向，<br>讓畫布與工具擁有足夠空間。</p><span>點點工坊</span></div>
+    <header><a class="brand" href="#"><span class="brand-icon">▦</span><span>點點工坊</span></a><div class="project-heading"><input id="project-name" aria-label="專案名稱" value="${escape(project.name)}"><span id="save-status">● 已自動儲存於此裝置</span></div><div class="header-actions"><button id="gallery">▦ <span>我的作品</span></button><button id="import">↥ <span>匯入</span></button><button class="primary" id="export">匯出作品 ↗</button></div></header>
+    <main><aside class="left-panel"><div class="section-label">繪圖工具 </div><div class="tools">${Object.entries(
       icons,
     )
       .map(
@@ -164,9 +168,16 @@ function render() {
       )
       .join(
         "",
-      )}</div><div class="brush-row"><label for="brush">筆刷大小</label><select id="brush"><option value="1">1 px</option><option value="2">2 px</option><option value="3">3 px</option></select></div><div class="divider"></div><div class="section-label">色彩面板 <button id="palette-edit" title="編輯色盤">＋</button></div><div class="current-color"><input type="color" id="color" value="${strColor}" aria-label="自訂顏色"><div><strong id="color-label">${strColor.toUpperCase()}</strong><small>目前使用的顏色</small></div></div><div class="swatches">${project.palette.map((strHex) => `<button class="swatch ${strHex.toLowerCase() === strColor.toLowerCase() ? "selected" : ""}" style="background:${strHex}" data-color="${strHex}" title="${strHex}"></button>`).join("")}</div><p class="tiny palette-hint">點選色票，讓靈感上色。</p><div class="left-bottom"><span>⌘ Z 復原</span><span>B 鉛筆 · E 橡皮擦</span><span>Space ＋ 拖曳平移</span><button id="help">⌨ 快捷鍵與操作說明</button></div></aside>
-    <section class="workspace"><div class="canvas-toolbar"><div class="canvas-title"><span class="status-dot"></span><strong>${escape(action().name)}</strong><span class="muted">/ 第 ${iFrame + 1} 格</span></div><div class="canvas-controls"><button id="undo" title="復原 Ctrl+Z">↶</button><button id="redo" title="重做 Ctrl+Shift+Z">↷</button><i></i><button id="grid" class="${isGrid ? "toggle-on" : ""}" title="切換格線">▦</button><button id="onion" class="${isOnion ? "toggle-on" : ""}" title="洋蔥皮：顯示前一格">◉</button><i></i><button id="zoom-out" title="縮小">−</button><button id="zoom-reset" class="zoom-value">${Math.round(iZoom * 100)}%</button><button id="zoom-in" title="放大">＋</button></div></div><div id="canvas-area"><div class="canvas-caption">${project.width} × ${project.height} PX <span>·</span> TRANSPARENT</div><div id="canvas-holder"><canvas id="reference-canvas"></canvas><canvas id="onion-canvas"></canvas><canvas id="drawing-canvas" aria-label="像素繪圖畫布"></canvas><div id="grid-overlay"></div><div id="pivot-marker" title="對齊基準點">＋</div></div><div class="canvas-tip">${icons[strTool]} ${({ pencil: "鉛筆工具", eraser: "橡皮擦工具", fill: "填色工具", picker: "滴管工具", move: "平移工具" } as Record<string, string>)[strTool]}<span>滾輪縮放 · 雙指縮放</span></div></div><div class="timeline"><div class="timeline-heading"><div><strong>影格時間軸</strong><span id="frame-count">${action().frames.length} FRAMES</span></div><div class="timeline-actions"><button id="duplicate-frame" title="複製目前影格">▣ 複製</button><button id="delete-frame" title="刪除目前影格">⌫</button><button id="add-frame" class="soft-button">＋ 新增影格</button></div></div><div class="timeline-bottom"><button id="play" class="play-button" aria-label="播放動畫">${isPlaying ? "Ⅱ" : "▶"}</button><div id="frames"></div><div class="timeline-fps"><label for="fps">速度</label><div><input id="fps" type="number" min="1" max="30" value="${action().fps}"><span>FPS</span></div></div></div></div></section>
-    <aside class="right-panel"><div class="section-label">動畫預覽 <span>LIVE</span></div><div class="preview-box"><canvas id="preview-canvas"></canvas><span>${isPlaying ? "播放中" : "即時預覽"}</span></div><div class="preview-options"><label><input id="loop" type="checkbox" ${action().loop ? "checked" : ""}> 循環播放</label><span>1× 原始比例</span></div><div class="divider"></div><div class="section-label">動作列表 <button id="add-action" title="新增動作">＋</button></div><div class="action-list">${project.actions.map((item, i) => `<button data-action="${i}" class="action-item ${i === iAction ? "selected" : ""}"><span class="action-symbol">${i === 0 ? "↔" : "◇"}</span><span><strong>${escape(item.name)}</strong><small>${item.frames.length} 格影格 · ${item.fps} FPS</small></span><span class="action-arrow">${i === iAction ? "●" : "›"}</span></button>`).join("")}</div><div class="action-management"><button id="rename-action">重新命名</button><button id="delete-action">刪除動作</button></div><div class="divider"></div><div class="section-label">畫布設定</div><div class="setting-row"><span>畫布尺寸</span><button id="resize">${project.width} × ${project.height} ↗</button></div><div class="setting-row"><span>對齊基準</span><button id="alignment">${project.pivot.x}, ${project.pivot.y} ⌖</button></div><div class="setting-row"><span>背景</span><span class="muted">透明</span></div><button id="templates" class="template-card"><span>✧</span><strong>從一點靈感開始<small>開啟範例與空白模板 ↗</small></strong></button><button id="versions" class="version-link">◷ 版本紀錄與快照</button></aside></main><footer><span><i class="status-dot"></i> 離線也能安心創作</span><span>${project.width} × ${project.height} px <b>·</b> ${project.actions.length} 個動作 <b>·</b> ${action().frames.length} 格影格</span><span>每一個像素，都有你的個性。<span class="footer-spark">✧</span></span></footer><div id="toast" role="status"></div><dialog id="modal"></dialog>`;
+      )}</div><div class="brush-row"><label for="brush">筆刷大小</label><select id="brush"><option value="1">1 px</option><option value="2">2 px</option><option value="3">3 px</option></select></div><div id="color-panel"></div><div class="left-bottom"><span>⌘ Z 復原</span><span>B 鉛筆 · E 橡皮擦</span><span>Space ＋ 拖曳平移</span><button id="help">⌨ 快捷鍵與操作說明</button></div></aside>
+    <section class="workspace"><div class="canvas-toolbar"><div class="canvas-title"><span class="status-dot"></span><strong>${escape(action().name)}</strong><span class="muted">/ 第 ${iFrame + 1} 格</span></div><div class="canvas-controls"><button id="undo" title="復原 Ctrl+Z">↶</button><button id="redo" title="重做 Ctrl+Shift+Z">↷</button><i></i><button id="grid" class="${isGrid ? "toggle-on" : ""}" title="切換格線">▦</button><button id="onion" class="${isOnion ? "toggle-on" : ""}" title="洋蔥皮：顯示前一格">◉</button><i></i><button id="zoom-out" title="縮小">−</button><button id="zoom-reset" class="zoom-value">${Math.round(iZoom * 100)}%</button><button id="zoom-in" title="放大">＋</button></div></div><div id="canvas-area"><div class="canvas-caption">${project.width} × ${project.height} px · 透明背景</div><div id="canvas-holder"><canvas id="reference-canvas"></canvas><canvas id="onion-canvas"></canvas><canvas id="drawing-canvas" aria-label="像素繪圖畫布"></canvas><div id="grid-overlay"></div><div id="pivot-marker" title="對齊基準點">＋</div></div><div class="canvas-tip">${icons[strTool]} ${({ pencil: "鉛筆工具", eraser: "橡皮擦工具", fill: "填色工具", picker: "滴管工具", move: "平移工具" } as Record<string, string>)[strTool]}<span>滾輪縮放 · 雙指縮放</span></div></div><div class="timeline"><div class="timeline-heading"><div><strong>影格時間軸</strong><span id="frame-count">${action().frames.length} 格</span></div><div class="timeline-actions"><button id="duplicate-frame" title="複製目前影格">▣ 複製</button><button id="delete-frame" title="刪除目前影格">⌫</button><button id="add-frame" class="soft-button">＋ 新增影格</button></div></div><div class="timeline-bottom"><button id="play" class="play-button" aria-label="播放動畫">${isPlaying ? "Ⅱ" : "▶"}</button><div id="frames"></div><div class="timeline-fps"><label for="fps">速度</label><div><input id="fps" type="number" min="1" max="30" value="${action().fps}"><span>FPS</span></div></div></div></div></section>
+    <aside class="right-panel"><div class="section-label">動畫預覽 </div><div class="preview-box"><canvas id="preview-canvas"></canvas><span>${isPlaying ? "播放中" : "即時預覽"}</span></div><div class="preview-options"><label><input id="loop" type="checkbox" ${action().loop ? "checked" : ""}> 循環播放</label><span>1× 原始比例</span></div><div class="divider"></div><div class="section-label">動作列表 <button id="add-action" title="新增動作">＋</button></div><div class="action-list">${project.actions.map((item, i) => `<button data-action="${i}" class="action-item ${i === iAction ? "selected" : ""}"><span class="action-symbol">${i === 0 ? "↔" : "◇"}</span><span><strong>${escape(item.name)}</strong><small>${item.frames.length} 格影格 · ${item.fps} FPS</small></span><span class="action-arrow">${i === iAction ? "●" : "›"}</span></button>`).join("")}</div><div class="action-management"><button id="rename-action">重新命名</button><button id="delete-action">刪除動作</button></div><div class="divider"></div><div class="section-label">畫布設定</div><div class="setting-row"><span>畫布尺寸</span><button id="resize">${project.width} × ${project.height} ↗</button></div><div class="setting-row"><span>對齊基準</span><button id="alignment">${project.pivot.x}, ${project.pivot.y} ⌖</button></div><div class="setting-row"><span>背景</span><span class="muted">透明</span></div><button id="templates" class="template-card"><span>＋</span><strong>新增角色或範例<small>選擇尺寸與參考動作</small></strong></button><button id="versions" class="version-link">◷ 版本紀錄與快照</button></aside></main><footer><span><i class="status-dot"></i> 自動儲存於此瀏覽器</span><span>${project.width} × ${project.height} px <b>·</b> ${project.actions.length} 個動作 <b>·</b> ${action().frames.length} 格影格</span></footer><div id="toast" role="status"></div><dialog id="modal"></dialog>`;
+  mountColorPanel(
+    document.querySelector<HTMLElement>("#color-panel")!,
+    strColor,
+    project.palette,
+    selectColor,
+    () => openPaletteDialog(project, applyCurrentProject),
+  );
   bind();
   renderCanvases();
   renderTimeline();
@@ -412,16 +423,7 @@ function fill(iX: number, iY: number) {
 }
 function selectColor(strNext: string) {
   strColor = strNext;
-  (document.querySelector("#color") as HTMLInputElement).value = strColor;
-  document.querySelector("#color-label")!.textContent = strColor.toUpperCase();
-  document
-    .querySelectorAll<HTMLButtonElement>("[data-color]")
-    .forEach((button) =>
-      button.classList.toggle(
-        "selected",
-        button.dataset.color!.toLowerCase() === strColor.toLowerCase(),
-      ),
-    );
+  updateColorSelection(strColor);
 }
 function setTool(strNext: string) {
   strTool = strNext;
@@ -572,7 +574,7 @@ function bind() {
   });
   click("import", importMenu);
   click("resize", () => openResizeDialog(project, applyCurrentProject));
-  click("palette-edit", () => openPaletteDialog(project, applyCurrentProject));
+
   click("alignment", () =>
     openAlignmentDialog(project, applyCurrentProject, iAction),
   );
@@ -582,7 +584,7 @@ function bind() {
   click("versions", versions);
   click("help", () =>
     modal(
-      "讓每個像素，都剛剛好",
+      "快捷鍵與操作說明",
       '<div class="help-grid"><p><b>B / E / G / I / H</b><br>鉛筆 / 橡皮擦 / 填色 / 滴管 / 平移</p><p><b>Ctrl 或 ⌘ + Z</b><br>復原；加 Shift 重做</p><p><b>Space</b><br>播放 / 暫停；按住拖曳平移</p><p><b>滾輪 / 雙指</b><br>縮放畫布，拖曳影格可調整順序</p><p><b>參考圖</b><br>匯入 PNG 作為底圖，描繪自己的角色</p><p><b>自動儲存</b><br>儲存於目前瀏覽器，請匯出專案備份</p></div>',
     ),
   );
@@ -712,7 +714,7 @@ function stopPlayback() {
 function modal(strTitle: string, strContent: string, strFooter = "") {
   stopPlayback();
   const dialog = document.querySelector<HTMLDialogElement>("#modal")!;
-  dialog.innerHTML = `<div class="modal-heading"><div><span class="eyebrow">PIXEL SPRITE STUDIO</span><h2>${strTitle}</h2></div><button class="close-modal" aria-label="關閉">×</button></div>${strContent}${strFooter}`;
+  dialog.innerHTML = `<div class="modal-heading"><div><h2>${strTitle}</h2></div><button class="close-modal" aria-label="關閉">×</button></div>${strContent}${strFooter}`;
   dialog
     .querySelector(".close-modal")!
     .addEventListener("click", () => dialog.close());
@@ -757,8 +759,8 @@ function confirmDialog(
 }
 function templates() {
   const dialog = modal(
-    "一個小小的開始",
-    '<p class="modal-intro">從範例找靈感，或留白給你的想像。</p><div class="template-grid"><button data-template="sample"><span class="template-emoji">🌱</span><strong>紫帽冒險家</strong><small>32 × 32 · 走路循環範例</small></button><button data-template="16"><span class="template-emoji">▦</span><strong>迷你角色</strong><small>16 × 16 · 空白畫布</small></button><button data-template="32"><span class="template-emoji">▦</span><strong>經典像素</strong><small>32 × 32 · 空白畫布</small></button><button data-template="64"><span class="template-emoji">▦</span><strong>更多細節</strong><small>64 × 64 · 空白畫布</small></button></div><p class="tiny">目前作品已自動儲存至「我的作品」。</p>',
+    "建立角色",
+    '<p class="modal-intro">選擇空白畫布，或使用行走範例。</p><div class="template-grid"><button data-template="sample"><span class="template-emoji">▦</span><strong>紫帽冒險家</strong><small>32 × 32 · 走路循環範例</small></button><button data-template="16"><span class="template-emoji">▦</span><strong>迷你角色</strong><small>16 × 16 · 空白畫布</small></button><button data-template="32"><span class="template-emoji">▦</span><strong>經典像素</strong><small>32 × 32 · 空白畫布</small></button><button data-template="64"><span class="template-emoji">▦</span><strong>更多細節</strong><small>64 × 64 · 空白畫布</small></button></div><p class="tiny">目前作品已自動儲存至「我的作品」。</p>',
   );
   dialog.querySelectorAll<HTMLButtonElement>("[data-template]").forEach(
     (button) =>
@@ -806,8 +808,8 @@ function templates() {
 }
 function exportMenu() {
   const dialog = modal(
-    "讓像素，走進你的遊戲",
-    '<p class="modal-intro">透明背景、整數像素，準備好前往下一個世界。</p><div class="export-options"><button data-export="png"><strong>PNG 單格圖像</strong><small>目前影格 · 透明背景 · 原始尺寸</small></button><button data-export="web"><strong>Web 動畫素材包</strong><small>Sprite sheet + JSON + 可直接開啟的預覽</small></button><button data-export="godot"><strong>Godot 4 素材包</strong><small>PNG + SpriteFrames .tres + AnimatedSprite2D 場景</small></button><button data-export="project"><strong>可編輯專案檔</strong><small>保留所有動作、影格、參考圖與色盤 · JSON</small></button></div>',
+    "匯出作品",
+    '<p class="modal-intro">選擇圖像、引擎素材包或可編輯專案。</p><div class="export-options"><button data-export="png"><strong>PNG 單格圖像</strong><small>目前影格 · 透明背景 · 原始尺寸</small></button><button data-export="web"><strong>Web 動畫素材包</strong><small>Sprite sheet + JSON + 可直接開啟的預覽</small></button><button data-export="godot"><strong>Godot 4 素材包</strong><small>PNG + SpriteFrames .tres + AnimatedSprite2D 場景</small></button><button data-export="project"><strong>可編輯專案檔</strong><small>保留所有動作、影格、參考圖與色盤 · JSON</small></button></div>',
   );
   dialog.querySelectorAll<HTMLButtonElement>("[data-export]").forEach(
     (button) =>
@@ -852,7 +854,7 @@ function exportMenu() {
 }
 function importMenu() {
   const dialog = modal(
-    "把靈感帶進來",
+    "匯入素材或專案",
     '<p class="modal-intro">匯入素材開始描繪，或接續另一台裝置上的作品。</p><div class="export-options"><button id="image-import"><strong>匯入 PNG / Sprite sheet</strong><small>切割影格、去背、縮放與參考底圖</small></button><button id="project-import"><strong>匯入可編輯專案</strong><small>開啟先前匯出的 .pixel.json</small></button></div><input id="project-file" type="file" accept=".json,application/json" hidden>',
   );
   dialog.querySelector("#image-import")!.addEventListener("click", () => {
@@ -957,7 +959,7 @@ function isValidProject(candidate: any): candidate is Project {
 }
 function frameMenu() {
   const dialog = modal(
-    "微調這一格的故事",
+    "影格操作",
     '<div class="nudge-layout"><div><h3>角色位移</h3><p class="tiny">每次移動 1 px，畫布外的像素會裁切。</p><div class="nudge-buttons"><button data-nudge="0,-1">↑</button><button data-nudge="-1,0">←</button><button data-nudge="1,0">→</button><button data-nudge="0,1">↓</button></div></div><div><h3>動作整理</h3><div class="export-options"><button id="frame-left"><strong>影格向前移</strong></button><button id="frame-right"><strong>影格向後移</strong></button><button id="new-role"><strong>從目前姿勢建立新角色</strong><small>保留色盤與尺寸，以這一格重新開始</small></button></div></div></div>',
   );
   dialog.querySelectorAll<HTMLButtonElement>("[data-nudge]").forEach(
@@ -1061,7 +1063,7 @@ async function gallery() {
   );
   const dialog = modal(
     "我的像素收藏",
-    `<p class="modal-intro">靈感不用一次完成，隨時回來接著畫。</p><div class="gallery-home-actions"><button id="gallery-new" class="primary">＋ 建立新角色</button><button id="gallery-import">↥ 匯入專案或素材</button></div><div class="gallery-grid">${entries.map((entry, i) => `<div class="gallery-item"><button data-open="${i}"><canvas></canvas><strong>${escape(entry.project.name)}</strong><small>${entry.project.width} × ${entry.project.height} · ${new Date(entry.savedAt).toLocaleDateString("zh-TW")}</small></button><div class="gallery-action-thumbs">${entry.project.actions.map((item: any, j: number) => `<span><canvas data-thumb="${i}-${j}"></canvas><small>${escape(item.name)}</small></span>`).join("")}</div><button data-remove="${i}" class="gallery-delete" title="刪除作品">⌫</button></div>`).join("")}</div>`,
+    `<p class="modal-intro">開啟既有角色，或建立新角色。</p><div class="gallery-home-actions"><button id="gallery-new" class="primary">＋ 建立新角色</button><button id="gallery-import">↥ 匯入專案或素材</button></div><div class="gallery-grid">${entries.map((entry, i) => `<div class="gallery-item"><button data-open="${i}"><canvas></canvas><strong>${escape(entry.project.name)}</strong><small>${entry.project.width} × ${entry.project.height} · ${new Date(entry.savedAt).toLocaleDateString("zh-TW")}</small></button><div class="gallery-action-thumbs">${entry.project.actions.map((item: any, j: number) => `<span><canvas data-thumb="${i}-${j}"></canvas><small>${escape(item.name)}</small></span>`).join("")}</div><button data-remove="${i}" class="gallery-delete" title="刪除作品">⌫</button></div>`).join("")}</div>`,
   );
   dialog.querySelector("#gallery-new")!.addEventListener("click", () => {
     dialog.close();
@@ -1171,13 +1173,13 @@ async function versions() {
     .filter(belongsToProject)
     .sort((first, second) => second.savedAt - first.savedAt);
   const dialog = modal(
-    "留住每一個好點子",
-    `<p class="modal-intro">建立快照，放心試試不同的顏色與動作。</p><button id="snapshot" class="primary">＋ 儲存目前版本</button><div class="versions">${entries.length ? entries.map((entry, i) => `<button data-version="${i}"><span>◷ ${escape(entry.name || "未命名快照")}<small style="display:block;margin-top:5px;color:#9da78d">${new Date(entry.savedAt).toLocaleString("zh-TW")}</small></span><span>還原 ↗</span></button>`).join("") : '<p class="empty-state">還沒有版本快照。<br>為目前的靈感留下一個紀念吧。</p>'}</div>`,
+    "版本紀錄",
+    `<p class="modal-intro">儲存具名版本，或還原先前的編輯進度。</p><button id="snapshot" class="primary">＋ 儲存目前版本</button><div class="versions">${entries.length ? entries.map((entry, i) => `<button data-version="${i}"><span>◷ ${escape(entry.name || "未命名快照")}<small style="display:block;margin-top:5px;color:#9da78d">${new Date(entry.savedAt).toLocaleString("zh-TW")}</small></span><span>還原 ↗</span></button>`).join("") : '<p class="empty-state">還沒有版本紀錄。點選上方按鈕儲存目前狀態。</p>'}</div>`,
   );
   dialog.querySelector("#snapshot")!.addEventListener("click", () => {
     dialog.close();
     textDialog(
-      "為靈感取個名字",
+      "儲存版本",
       "版本名稱",
       `版本 ${entries.length + 1}`,
       (strName) => {
